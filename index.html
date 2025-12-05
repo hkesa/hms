@@ -18,25 +18,6 @@
     <!-- Icons -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 
-    <!-- 
-      === FIREBASE INTEGRATION GUIDE ===
-      要連接到 Firebase，請執行以下步驟：
-      
-      1. 前往 https://console.firebase.google.com/ 建立一個新專案。
-      2. 在專案設定中，選擇 "Add app" -> "Web" (</>)。
-      3. 複製 firebaseConfig 物件的內容。
-      4. 在下方 <script> 標籤中，取消註釋 Firebase 相關代碼。
-      5. 將您的 firebaseConfig 貼入。
-      6. 在 Firebase Console -> Firestore Database，建立資料庫並設定規則 (例如測試模式 allow read, write: if true;)。
-      7. 此代碼目前的 StorageService 使用 localStorage。若要使用 Firebase：
-         - 移除 StorageService 的 localStorage 邏輯。
-         - 使用 db.collection('helpers').add(data) 來儲存。
-         - 使用 db.collection('helpers').onSnapshot() 來讀取。
-         - 對於圖片，建議使用 Firebase Storage (storage.ref().put(file)) 並獲取 downloadURL 存入 Firestore。
-         
-      注意：由於此為單一 HTML 文件演示，下方代碼仍使用 localStorage 以確保您下載後可立即離線使用。
-    -->
-
     <style>
         /* Global Font Size Requirement */
         :root {
