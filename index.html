@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HMS - Helper Management System V1.9</title>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
+    <style>
+        /* Global Font Size Requirement */
+        :root {
+            font-size: 16px;
+        }
+        
+        body, input, button, select, textarea, p, h1, h2, h3, h4, h5, h6, span, div, a, li, label, table {
+            font-size: 16px !important;
+            font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+        }
+
+        /* Custom Scrollbar */
+        .sidebar-scroll::-webkit-scrollbar { width: 6px; }
+        .sidebar-scroll::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 3px; }
+
+        /* Sticky Header */
+        .sticky-nav { 
+            position: sticky; 
+            top: 0; 
+            z-index: 50; 
+            background-color: white; 
+            border-bottom: 1px solid #e2e8f0; 
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        }
+
+        /* Date Input Alignment - Icon Left Hack */
+        input[type="date"] {
+            text-align: left;
+            display: inline-flex;
+            flex-direction: row-reverse; /* Moves icon to left */
+            justify-content: flex-end;
+        }
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            margin-right: 8px;
+            margin-left: 0;
+            cursor: pointer;
+        }
+
+        /* Print Styles */
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { background: white; margin: 0; padding: 0; }
+            .page-break { page-break-before: always; }
+            .print-p-0 { padding: 0 !important; }
+            .sticky-nav { display: none; }
+            
+            /* PDF-like styling for print */
+            .pdf-container {
+                width: 100%;
+                max-width: 100%;
+                border: none;
+                box-shadow: none;
+            }
+            .pdf-page {
+                min-height: 100vh;
+                padding: 20px;
+                position: relative;
+            }
+        }
+        
+        /* Validation Alert Style */
+        .validation-alert {
+            background-color: #fee2e2; /* red-100 */
+            color: #991b1b; /* red-800 */
+            font-size: 14px !important;
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin-top: 4px;
+            border: 1px solid #fecaca;
+        }
+        
+        /* Button Styles */
+        .btn-outline-green {
+            border: 1px solid #16a34a; /* green-600 */
+            color: #16a34a;
+            background-color: white;
+        }
+        .btn-outline-green:hover {
+            background-color: #f0fdf4; /* green-50 */
+        }
+        .btn-outline-red {
+            border: 1px solid #dc2626; /* red-600 */
+            color: #dc2626;
+            background-color: white;
+        }
+        .btn-outline-red:hover {
+            background-color: #fef2f2; /* red-50 */
+        }
+
+        /* PDF Detail View Styles */
+        .detail-table { width: 100%; border-collapse: collapse; border: 1px solid #000; font-size: 14px !important; }
+        .detail-table th, .detail-table td { border: 1px solid #000; padding: 4px 8px; vertical-align: middle; }
+        .detail-header { background-color: #e0f2fe; font-weight: bold; text-align: center; } /* Light blue header */
+        .detail-label { font-weight: bold; background-color: #f8fafc; }
+        .checkmark { font-family: sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        // --- Configuration ---
+        const appId = 'hms-local-v1.9';
+        const ADMIN_PASS = 'admin@ADA2018';
+
+        // --- Data Lists ---
+        const NON_HK_REGIONS = [
+            "印尼Indonesia", "臺灣Taiwan", "澳門Macau", "中東middle East", "約旦Jordan", 
+            "阿曼Oman", "巴林Bahrain", "杜拜Dubai", "菲律賓Philippines", "新加坡Singapore", 
+            "科威特Kuwait", "卡塔爾Qatar", "黎巴嫩Lebanon", "以色列Israel", "阿聯酋UAE", 
+            "馬來西亞Malaysia", "阿布扎比Abu Dhabi", "沙特阿拉伯Saudi Arabia", "利雅得Riyadh", 
+            "塞浦路斯Cyprus", "蘇丹Sudan", "埃及Egypt", "比利時Belgium", "丹麥Denmark", 
+            "西班牙Spain", "中國內地China Mainland", "俄羅斯Russia"
+        ];
+
+        let DEFAULT_REGIONS = [
+            "西環Sai Wan", "上環Sheung Wan", "中環Central", "半山Mid-levels", "大潭Tai Tam", "金鐘Admiralty", "利東Lei Tung", "灣仔Wan Chai", "大坑Tai Hang", "天后Tin Hau", "北角North Point", "太古Tai Koo", "柴灣Chai Wan", "赤柱Stanley", "美孚Mei Foo", "南昌Nam Cheong", "奧運Olympic", "九龍Kowloon", "旺角Mong Kok", "佐敦Jordan", "紅磡Hung Hom", "黃埔Whampoa", "樂富Lok Fu", "啟德Kai Tak", "彩虹Choi Hung", "觀塘Kwun Tong", "藍田Lam田", "油塘Yau Tong", "羅湖Lo Wu", "上水Sheung Shui", "粉嶺Fanling", "太和Tai Wo", "大埔Tai Po", "火炭Fo Tan", "沙田Sha Tin", "大圍Tai Wai", "顯徑Hin Keng", "石門Shek Mun", "恆安Heng On", "屯門Tuen Mun", "兆康Siu Hong", "朗屏Long Ping", "元朗Yuen Long", "深井Sham Tseng", "大欖Tai Lam", "小欖Siu Lam", "荃灣Tsuen Wan", "葵興Kwai Hing", "葵涌Kwai Chung", "葵芳Kwai Fong", "葵盛Kwai Shing", "荔景Lai King", "青衣Tsing Yi", "馬灣Ma Wan", "東涌Tung Chung", "坑口Hang Hau", "寶林Po Lam", "西貢Sai Kung", "石澳Shek O", "長洲Cheung Chau", "梅窩Mui Wo", "坪洲Peng Chau", "西半山Mid-Levels West", "香港仔Aberdeen", "鴨脷洲Ap Lei Chau", "黃竹坑Wong Chuk Hang", "西營盤Sai Ying Pun", "薄扶林Pok Fu Lam", "貝沙灣Bel-Air", "跑馬地Happy Valley", "炮台山Fortress Hill", "鰂魚涌Quarry Bay", "西灣河Sai Wan Ho", "杏花邨Heng Fa Chuen", "小西灣Siu Sai Wan", "柯士甸Austin", "大角咀Tai Kok Tsui", "尖沙咀Tsim Sha Tsui", "何文田Ho Man Tin", "油麻地Yau Ma Tei", "深水埗Sham Shui Po", "荔枝角Lai Chi Kok", "石硤尾Shek Kip Mei", "新蒲崗San Po Kong", "長沙灣Cheung Sha Wan", "土瓜灣To Kwa Wan", "馬頭圍Ma Tau Wai", "宋皇臺Sung Wong Toi", "清水灣Clear Water Bay", "銅鑼灣Causeway Bay", "淺水灣Repulse Bay", "深水灣Deep Water Bay", "愉景灣Discovery Bay", "筲箕灣Shau Kei Wan", "九龍城Kowloon City", "九龍塘Kowloon Tong", "九龍灣Kowloon Bay", "黃大仙Wong Tai Sin", "慈雲山Tsz Wan Shan", "橫頭磡Wang Tau Hom", "鑽石山Diamond Hill", "牛頭角Ngau Tau Kok", "茶果嶺Cha Kwo Ling", "鯉魚門Lei Yue Mun", "秀茂坪Sau Mau Ping", "調景嶺Tiu Keng Leng", "將軍澳Tseung Kwan O", "沙頭角Sha Tau Kok", "日出康城Lohas Park", "掃管笏So Kwun Wat", "流浮山Lau Fou Shan", "天水圍Tin Shui Wai", "錦上路Kam Sheung Road", "文錦渡Man Kam To", "大窩口Tai Wo Hau", "小瀝源Siu Lek Yuen", "車公廟Che Kung Temple", "大水坑Tai Shui Hang", "馬鞍山Ma On Shan", "烏溪沙Wu Kai Sha", "南丫島Lamma Island", "大嶼山Lantau Island", "昂船洲Stonecutter Island", "堅尼地城Kennedy Town", "海怡半島South Horizons", "香港Hong Kong", "山頂The Peak", "昂坪Ngong Ping", "竹篙灣Penny's Bay", "貝澳Pui O", "大澳Tai O", "石壁Shek Pik", "塘福Tong Fuk", "古洞Kwu Tung", "禾輋Wo Che", "坪輋Ping Che", "打鼓嶺Ta Kwu Ling", "九肚山Kau To Shan", "馬料水Ma Liu Shui", "春坎角Chung Hom Kok", "汀九Ting Kau", "藍地Lam Tei", "龍鼓灘Lung Kwu Tan", "新墟San Hui", "牛池灣Ngau Chi Wan", "洪水橋Hung Shui Kiu", "錦田Kam Tin", "新田San Tin", "大棠Tai Tong", "八鄉Pat Heung", "屏山Ping Shan", "石塘咀Shek Tong Tsui", "田灣Tin Wan", "京士柏King's Park", "坪石Ping Shek", "大網仔Tai Mong Tsai", "十八鄉Shap Pat Heung", "三聖Sam Shing", "喜靈洲Hei Ling Chau", "蒲台島Po Toi", "又一村Yau Yat Chuen", "筆架山Beacon Hill", "青龍頭Tsing Lung Tau", "竹園Chuk Yuen", "順利Shun Lee", "蠔涌Ho Chung", "十四鄉Shap Sze Heung", "牛潭尾Ngau Tam Mei", "數碼港Cyberport", "科學園Science Park", "白石角Pak Shek Kok", "南生圍Nam Sang Wai", "大埔仔Tai Po Tsai", "大埔墟Tai Po Market", "荃灣西Tsuen Wan West", "沙田圍Sha Tin Wai", "中半山Mid-Levels Central", "東半山Mid-Levels East", "南邊圍Nam Pin Wai", "壽臣山Shouson Hill", "渣甸山Jardine's Lookout", "摩星嶺Mount Davis", "赤鱲角Chek Lap Kok", "欣澳Sunny Bay", "汀角Ting Kok", "梨木樹Lei Muk Shue", "稔灣Nim Wan", "第一城City One", "布袋澳Po Toi O", "匡湖居Marina Cove", "三門仔Sam Mun Tsai", "大尾篤Tai Mei Tuk", "石蔭Shek Yam", "彩雲Choi Wan", "禮頓山Leighton Hill", "樟木頭Cheung Muk Tau", "凹頭Au Tau", "添馬Tamar", "小蠔灣Siu Ho Wan", "順天Shun Tin", "寶達Po Tat", "華富Wah Fu", "西沙Sai Sha", "廈村 Ha Tsuen",
+            ...NON_HK_REGIONS
+        ];
+
+        DEFAULT_REGIONS.sort((a, b) => {
+            const aIsNonHK = NON_HK_REGIONS.includes(a);
+            const bIsNonHK = NON_HK_REGIONS.includes(b);
+            if (aIsNonHK && !bIsNonHK) return -1;
+            if (!aIsNonHK && bIsNonHK) return 1;
+            if (a.length !== b.length) return a.length - b.length;
+            return a.localeCompare(b, 'zh-HK');
+        });
+
+        // --- Local Storage Service ---
+        const StorageService = {
+            getKey: () => `hms_data_${appId}`,
+            getSettingsKey: () => `hms_settings_${appId}`,
+            getHelpers: () => {
+                const data = localStorage.getItem(StorageService.getKey());
+                return data ? JSON.parse(data) : [];
+            },
+            saveHelper: (helper) => {
+                let helpers = StorageService.getHelpers();
+                const now = new Date().toISOString();
+                if (helper.id) {
+                    helpers = helpers.map(h => h.id === helper.id ? { ...helper, updatedAt: now } : h);
+                } else {
+                    helper.id = Date.now().toString();
+                    helper.createdAt = now;
+                    helper.updatedAt = now;
+                    helpers.push(helper);
+                }
+                localStorage.setItem(StorageService.getKey(), JSON.stringify(helpers));
+                return helper.id;
+            },
+            deleteHelper: (id) => {
+                let helpers = StorageService.getHelpers();
+                helpers = helpers.filter(h => h.id !== id);
+                localStorage.setItem(StorageService.getKey(), JSON.stringify(helpers));
+            },
+            getSettings: () => {
+                const data = localStorage.getItem(StorageService.getSettingsKey());
+                if (data) return JSON.parse(data);
+                return { 
+                    schools: ['所有學校', '維港', 'Bright Star', 'Allen', '印尼PT', '其他'],
+                    workRegions: DEFAULT_REGIONS
+                };
+            },
+            saveSettings: (settings) => {
+                localStorage.setItem(StorageService.getSettingsKey(), JSON.stringify(settings));
+            }
+        };
+
+        const { useState, useEffect, useRef, useMemo } = React;
+
+        // --- Constants ---
+        const STATUS_OPTIONS = ['等上架', '已上架', '已下架', '保留', '已聘請', '已取消', '網上登記', '內部使用'];
+        const STATUS_TABS = ['所有', ...STATUS_OPTIONS];
+        const REGIONS = ['菲律賓', '印尼', '香港', '中東', '台灣', '新加坡', '馬來西亞', '其他'];
+        const LANG_LEVELS = ['不選擇', '學習中', '基本', '中等', '良好'];
+        const STAFF_OPTIONS = ['Adam', 'Mimi', 'Mickey', 'Val', 'Derek'];
+        const ZODIACS = ['鼠', '牛', '虎', '兔', '龍', '蛇', '馬', '羊', '猴', '雞', '狗', '豬'];
+        const HOROSCOPES = ['山羊', '水瓶', '雙魚', '白羊', '金牛', '雙子', '巨蟹', '獅子', '處女', '天秤', '天蠍', '人馬'];
+        const EMPLOYER_NATIONS = [
+            '本地人 Locals', '當地人 Natives', '中國 Chinese', '中東人 Middle East', '外國人 Foreigner',
+            '泰國 Thai', '印尼 Indonesian', '菲律賓 Filipino', '新加坡 Singaporean', '馬來西亞 Malaysian', '其他國籍 Other nationalities'
+        ];
+        const MONTHS = ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月'];
+        
+        // Initial State
+        const INITIAL_HELPER_STATE = {
+            photo: '', school: '', 
+            refNo: '', name: '', sex: '女', type: '', nationality: '', otherNationality: '',
+            contractEnd: '', hkid: '', passport: '', passportExp: '', dob: '',
+            religion: '', otherReligion: '', marital: '', education: '', 
+            height: '', weight: '',
+            spouseName: '', spouseJob: '', siblings: '', rank: '', 
+            sonCount: '', sonAges: [], 
+            daughterCount: '', daughterAges: [],
+            whatsapp: '', homePhone: '', otherPhone1: '', otherPhone2: '', otherPhone3: '', otherPhone4: '',
+            referrer: '', referrerWhatsapp: '',
+            homeAddress: '', internalNote: '', publicNote: '', colleague: 'Adam',
+            languages: { english: '', cantonese: '', mandarin: '', chineseCooking: '', westernCooking: '' },
+            regionExp: [], 
+            experience: [], 
+            q1: '喜歡', q2: '可自學', q3: '有信心', q4: '可以', q5: '有經驗', q6: '先上班',
+            q7: '不怕狗', q8: '不怕貓', q9: '沒有', q10: '兩樣無', q11: '無', q12: '無', q13: '同意',
+            status: '等上架',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+
+        // --- Logic Functions ---
+        const getAge = (dob) => {
+            if (!dob) return '';
+            const diff = Date.now() - new Date(dob).getTime();
+            return Math.abs(new Date(diff).getUTCFullYear() - 1970);
+        };
+
+        const getZodiac = (dob) => {
+            if (!dob) return '';
+            const year = new Date(dob).getFullYear();
+            return ZODIACS[(year - 1948) % 12] || ''; 
+        };
+
+        const getHoroscope = (dob) => {
+            if (!dob) return '';
+            const date = new Date(dob);
+            const month = date.getMonth() + 1;
+            const day = date.getDate();
+            if ((month == 1 && day <= 19) || (month == 12 && day >= 22)) return "山羊";
+            if ((month == 1 && day >= 20) || (month == 2 && day <= 18)) return "水瓶";
+            if ((month == 2 && day >= 19) || (month == 3 && day <= 20)) return "雙魚";
+            if ((month == 3 && day >= 21) || (month == 4 && day <= 19)) return "白羊";
+            if ((month == 4 && day >= 20) || (month == 5 && day <= 20)) return "金牛";
+            if ((month == 5 && day >= 21) || (month == 6 && day <= 21)) return "雙子";
+            if ((month == 6 && day >= 22) || (month == 7 && day <= 22)) return "巨蟹";
+            if ((month == 7 && day >= 23) || (month == 8 && day <= 22)) return "獅子";
+            if ((month == 8 && day >= 23) || (month == 9 && day <= 22)) return "處女";
+            if ((month == 9 && day >= 23) || (month == 10 && day <= 23)) return "天秤";
+            if ((month == 10 && day >= 24) || (month == 11 && day <= 22)) return "天蠍";
+            if ((month == 11 && day >= 23) || (month == 12 && day <= 21)) return "人馬";
+            return "";
+        };
+
+        const compressImage = (file) => { 
+             return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.src = event.target.result;
+                    img.onload = () => {
+                        const elem = document.createElement('canvas');
+                        const width = 400; 
+                        const scaleFactor = width / img.width;
+                        elem.width = width;
+                        elem.height = img.height * scaleFactor;
+                        const ctx = elem.getContext('2d');
+                        ctx.drawImage(img, 0, 0, elem.width, elem.height);
+                        resolve(ctx.toDataURL('image/jpeg', 0.7));
+                    };
+                };
+            });
+        };
+        const rotateImage = (base64Str) => { 
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.src = base64Str;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const radians = 45 * Math.PI / 180;
+                    const sin = Math.abs(Math.sin(radians));
+                    const cos = Math.abs(Math.cos(radians));
+                    const newWidth = img.width * cos + img.height * sin;
+                    const newHeight = img.width * sin + img.height * cos;
+                    
+                    canvas.width = newWidth;
+                    canvas.height = newHeight;
+                    
+                    const ctx = canvas.getContext('2d');
+                    ctx.translate(canvas.width/2, canvas.height/2);
+                    ctx.rotate(radians);
+                    ctx.drawImage(img, -img.width/2, -img.height/2);
+                    resolve(canvas.toDataURL('image/jpeg', 0.8));
+                };
+            });
+        };
+        const formatDate = (isoString) => isoString ? new Date(isoString).toLocaleDateString('zh-HK') : '-';
+
+        const checkWarning = (type, value, extra) => {
+            if (!value) return null;
+            if (type === 'passportExp' && extra?.createdAt) {
+                const expDate = new Date(value);
+                const regDate = new Date(extra.createdAt);
+                const nineMonths = 9 * 30 * 24 * 60 * 60 * 1000;
+                if (expDate - regDate < nineMonths) return "護照有限期少過9個月，請提醒外傭換領新護照";
+            }
+            if (type === 'age') return parseInt(value) < 24 ? "如是菲傭，申請年齡須多過24歲或以上" : null;
+            if (type === 'height') return parseInt(value) < 150 ? "外傭身高少過150cm，請檢查" : null;
+            if (type === 'weight') {
+                const w = parseInt(value);
+                if (w < 40) return "外傭體重少過40kg，請檢查";
+                if (w > 60) return "外傭體重多過60kg，請檢查";
+            }
+            return null;
+        };
+
+        const calculateBMI = (h, w) => {
+            if(!h || !w) return "";
+            const hm = h / 100;
+            const bmi = w / (hm * hm);
+            return bmi.toFixed(1);
+        };
+
+        // --- Shared Components ---
+        const Input = ({ label, value, onChange, type="text", placeholder, className="", warningCheck }) => {
+            const warning = warningCheck ? warningCheck(value) : null;
+            return (
+                <div className={`mb-4 ${className}`}>
+                    {label && <label className="block font-semibold mb-1 text-gray-700">{label}</label>}
+                    <input type={type} value={value || ''} onChange={e => onChange(e.target.value)} 
+                        className="w-full border border-gray-300 p-2 rounded focus:outline-none focus:border-blue-500" placeholder={placeholder} />
+                    {warning && <div className="validation-alert">{warning}</div>}
+                </div>
+            );
+        };
+        const Select = ({ label, value, onChange, options, className="", placeholder="請選擇" }) => (
+            <div className={`mb-4 ${className}`}>
+                {label && <label className="block font-semibold mb-1 text-gray-700">{label}</label>}
+                <select value={value || ''} onChange={e => onChange(e.target.value)} 
+                    className="w-full border border-gray-300 p-2 rounded focus:outline-none focus:border-blue-500 bg-white">
+                    <option value="">{placeholder}</option>
+                    {options.map(o => <option key={o} value={o}>{o}</option>)}
+                </select>
+            </div>
+        );
+
+        // --- Pages ---
+
+        // 1. Settings Page
+        const SettingsPage = ({ onBack }) => {
+            /* ... (SettingsPage code same as V1.8) ... */
+            const [settings, setSettings] = useState(StorageService.getSettings());
+            const [newItem, setNewItem] = useState('');
+            const [activeTab, setActiveTab] = useState('schools');
+            const [editIdx, setEditIdx] = useState(-1);
+            const [editVal, setEditVal] = useState('');
+
+            const updateSettings = (key, newList) => {
+                const updated = { ...settings, [key]: newList };
+                setSettings(updated);
+                StorageService.saveSettings(updated);
+            };
+
+            const addItem = () => {
+                const list = settings[activeTab] || [];
+                if (newItem && !list.includes(newItem)) {
+                    updateSettings(activeTab, [...list, newItem]);
+                    setNewItem('');
+                }
+            };
+            const removeItem = (item) => {
+                if (prompt("請輸入密碼確認刪除") === ADMIN_PASS) {
+                    updateSettings(activeTab, settings[activeTab].filter(x => x !== item));
+                } else {
+                    alert("密碼錯誤");
+                }
+            };
+            const moveItem = (idx, dir) => {
+                const list = [...settings[activeTab]];
+                if (idx + dir < 0 || idx + dir >= list.length) return;
+                [list[idx], list[idx+dir]] = [list[idx+dir], list[idx]];
+                updateSettings(activeTab, list);
+            };
+            const startEdit = (idx, val) => { setEditIdx(idx); setEditVal(val); };
+            const saveEdit = () => {
+                if (editVal) {
+                    const list = [...settings[activeTab]];
+                    list[editIdx] = editVal;
+                    updateSettings(activeTab, list);
+                }
+                setEditIdx(-1);
+            };
+
+            return (
+                <div className="p-6">
+                    <button onClick={onBack} className="mb-4 text-gray-500">&larr; 返回</button>
+                    <h2 className="text-2xl font-bold mb-6">系統設定</h2>
+                    <div className="flex gap-4 mb-4">
+                        <button onClick={() => setActiveTab('schools')} className={`px-4 py-2 rounded ${activeTab==='schools'?'bg-blue-600 text-white':'bg-gray-200'}`}>學校清單設定</button>
+                        <button onClick={() => setActiveTab('workRegions')} className={`px-4 py-2 rounded ${activeTab==='workRegions'?'bg-blue-600 text-white':'bg-gray-200'}`}>工作地區設定</button>
+                    </div>
+                    <div className="bg-white p-6 rounded shadow max-w-xl">
+                        <h3 className="font-bold mb-4">{activeTab === 'schools' ? '學校清單' : '工作地區'}</h3>
+                        <div className="flex gap-2 mb-4">
+                            <input value={newItem} onChange={e => setNewItem(e.target.value)} className="border p-2 flex-1 rounded" placeholder="新增項目..." />
+                            <button onClick={addItem} className="bg-green-600 text-white px-4 rounded">新增</button>
+                        </div>
+                        <ul className="space-y-2 max-h-[60vh] overflow-y-auto">
+                            {(settings[activeTab] || []).map((s, idx) => (
+                                <li key={idx} className="flex justify-between items-center border-b pb-2">
+                                    {editIdx === idx ? (
+                                        <div className="flex gap-2 flex-1 mr-2">
+                                            <input value={editVal} onChange={e=>setEditVal(e.target.value)} className="border p-1 flex-1" />
+                                            <button onClick={saveEdit} className="text-green-600 text-sm">儲存</button>
+                                        </div>
+                                    ) : (
+                                        <span className="flex-1">{s}</span>
+                                    )}
+                                    <div className="flex gap-2 items-center">
+                                        {s !== '所有學校' && (
+                                            <>
+                                                <button onClick={()=>startEdit(idx, s)} className="text-orange-500 text-sm border px-2 py-1 rounded hover:bg-orange-50">修改</button>
+                                                <button onClick={()=>removeItem(s)} className="text-red-500 text-sm border px-2 py-1 rounded hover:bg-red-50">刪除</button>
+                                            </>
+                                        )}
+                                        <button onClick={()=>moveItem(idx, -1)} className="btn-outline-green p-1 rounded w-8 h-8 flex items-center justify-center" title="上移"><i className="fas fa-arrow-up"></i></button>
+                                        <button onClick={()=>moveItem(idx, 1)} className="btn-outline-green p-1 rounded w-8 h-8 flex items-center justify-center" title="下移"><i className="fas fa-arrow-down"></i></button>
+                                    </div>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                </div>
+            );
+        };
+
+        // 2. Helper Form
+        const HelperForm = ({ initialData, onSave, onCancel, onDelete, settings }) => {
+            const [data, setData] = useState(initialData || INITIAL_HELPER_STATE);
+            const [tab, setTab] = useState('basic');
+
+            const handleUpdate = (field, value) => setData(p => ({ ...p, [field]: value }));
+            const handlePhoto = async (e) => {
+                if(e.target.files[0]) {
+                    const base64 = await compressImage(e.target.files[0]);
+                    handleUpdate('photo', base64);
+                }
+            };
+            const handleRotate = async () => {
+                if(data.photo) {
+                    const rotated = await rotateImage(data.photo);
+                    handleUpdate('photo', rotated);
+                }
+            };
+            
+            // ... (Experience functions same as V1.8) ...
+            const addExperience = (atStart) => {
+                const newExp = { 
+                    id: Date.now(), hidden: false, 
+                    startYear: '', startMonth: '', endYear: '', endMonth: '', workDuration: '',
+                    region: '', contractStatus: '', members: [], pets: [], disabilities: [], tags: [] 
+                };
+                const list = [...(data.experience || [])];
+                atStart ? list.unshift(newExp) : list.push(newExp);
+                handleUpdate('experience', list);
+            };
+            const updateExp = (i, f, v) => { const l=[...data.experience]; l[i]={...l[i],[f]:v}; handleUpdate('experience', l); };
+            const removeExp = (i) => { if(confirm("是否確定刪除？")) handleUpdate('experience', data.experience.filter((_, idx) => idx !== i)); };
+            const moveExp = (i, dir) => {
+                const l=[...data.experience]; if(i+dir<0||i+dir>=l.length)return;
+                [l[i],l[i+dir]]=[l[i+dir],l[i]]; handleUpdate('experience', l);
+            };
+            const getPublicLink = () => { 
+                if (!data.id) return alert("請先儲存資料以獲取連結");
+                const url = `${window.location.origin}${window.location.pathname}?view=public&id=${data.id}`;
+                navigator.clipboard.writeText(url);
+                alert("已複製連結: " + url);
+            };
+            const zodiac = getZodiac(data.dob);
+            const horoscope = getHoroscope(data.dob);
+
+            return (
+                <div className="bg-white min-h-screen pb-20">
+                    <div className="sticky-nav flex items-center p-4 gap-4">
+                        <button onClick={onCancel} className="px-3 py-1 border rounded hover:bg-gray-100">上一頁</button>
+                        <h2 className="text-xl font-bold flex-1">新增外傭</h2>
+                        <button onClick={getPublicLink} className="bg-purple-600 text-white px-3 py-1 rounded text-sm hover:bg-purple-700">外傭網頁</button>
+                        <div className="flex items-center gap-2">
+                            <span className="font-semibold text-sm">上架狀態:</span>
+                            <select value={data.status} onChange={e => handleUpdate('status', e.target.value)} className="border p-1 rounded">
+                                {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+                            </select>
+                        </div>
+                        <div className="text-xs text-gray-500 text-right">
+                            <div>登記: {formatDate(data.createdAt)}</div>
+                            <div>更新: {formatDate(data.updatedAt)}</div>
+                        </div>
+                        <button onClick={() => onSave(data)} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">儲存</button>
+                        <button onClick={() => onDelete(data.id)} className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">刪除</button>
+                    </div>
+
+                    <div className="flex border-b px-4 mt-2 overflow-x-auto">
+                        {['基本資料', '能力資料', '工作資料', '附加資料'].map((t, i) => {
+                             const key = ['basic', 'skills', 'experience', 'additional'][i];
+                             return <button key={key} onClick={() => setTab(key)} className={`px-6 py-3 font-medium whitespace-nowrap ${tab === key ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}>{t}</button>;
+                        })}
+                    </div>
+
+                    <div className="p-6 max-w-4xl mx-auto">
+                        {/* Tab 1-3 content mostly same as V1.8, omitted for brevity but included in output if file generated fully */}
+                        {tab === 'basic' && (
+                            <div className="flex flex-col gap-4">
+                                <div className="border p-4 rounded bg-gray-50 flex flex-col items-center">
+                                    {data.photo ? <img src={data.photo} className="h-40 w-40 object-cover rounded mb-2" /> : <div className="h-40 w-40 bg-gray-200 rounded flex items-center justify-center text-gray-400 mb-2">No Photo</div>}
+                                    <div className="flex gap-2">
+                                        <input type="file" onChange={handlePhoto} className="text-sm" />
+                                        <button onClick={handleRotate} className="bg-gray-200 px-2 rounded hover:bg-gray-300"><i className="fas fa-redo"></i></button>
+                                    </div>
+                                </div>
+                                <div><Select label="國籍" value={data.nationality} onChange={v => handleUpdate('nationality', v)} options={['菲律賓', '印尼', '泰國', '其他']} />{data.nationality === '其他' && <Input placeholder="請輸入其他國籍" value={data.otherNationality} onChange={v => handleUpdate('otherNationality', v)} />}</div>
+                                <Select label="學校名稱" value={data.school} onChange={v => handleUpdate('school', v)} options={settings.schools} placeholder="請選擇學校" />
+                                <Input label="外傭編號" value={data.refNo} onChange={v => handleUpdate('refNo', v)} />
+                                <Input label="外傭姓名" value={data.name} onChange={v => handleUpdate('name', v)} />
+                                <Select label="性別" value={data.sex} onChange={v => handleUpdate('sex', v)} options={['女', '男']} />
+                                <Select label="申請類別" value={data.type} onChange={v => handleUpdate('type', v)} options={['海外外傭', '本地完約', '特別個案']} />
+                                <Input label="完約日期" type="date" value={data.contractEnd} onChange={v => handleUpdate('contractEnd', v)} />
+                                <Input label="出生日期" type="date" value={data.dob} onChange={v => handleUpdate('dob', v)} />
+                                <div className="flex gap-4"><Input label="年齡" value={getAge(data.dob)} className="bg-gray-100 flex-1" warningCheck={(v) => checkWarning('age', v)} /><Input label="生肖" value={zodiac} className="bg-gray-100 flex-1" /><Input label="星座" value={horoscope} className="bg-gray-100 flex-1" /></div>
+                                <Input label="護照到期日" type="date" value={data.passportExp} onChange={v => handleUpdate('passportExp', v)} warningCheck={(v) => checkWarning('passportExp', v, {createdAt: data.createdAt})} />
+                                <Input label="護照號碼" value={data.passport} onChange={v => handleUpdate('passport', v)} />
+                                <Input label="香港身份證號碼" value={data.hkid} onChange={v => handleUpdate('hkid', v)} />
+                                <Select label="宗教" value={data.religion} onChange={v => handleUpdate('religion', v)} options={['天主教', '基督教', '伊斯蘭教', '佛教', '無', '其他']} />{data.religion === '其他' && <Input placeholder="請輸入其他宗教" value={data.otherReligion} onChange={v => handleUpdate('otherReligion', v)} />}
+                                <Select label="婚姻狀況" value={data.marital} onChange={v => handleUpdate('marital', v)} options={['未婚', '已婚', '離婚', '分居', '單親', '喪偶', '有伴侶']} />
+                                <Select label="學歷" value={data.education} onChange={v => handleUpdate('education', v)} options={['小學', '中學', '大專', '大學']} />
+                                <div className="flex flex-col gap-4"><Input label="身高 (cm)" value={data.height} onChange={v => handleUpdate('height', v)} warningCheck={(v) => checkWarning('height', v)} /><Input label="體重 (kg)" value={data.weight} onChange={v => handleUpdate('weight', v)} warningCheck={(v) => checkWarning('weight', v)} /></div>
+                                <Input label="配偶姓名" value={data.spouseName} onChange={v => handleUpdate('spouseName', v)} />
+                                <Input label="配偶職業" value={data.spouseJob} onChange={v => handleUpdate('spouseJob', v)} />
+                                <Input label="兄弟姐妹數目" type="number" value={data.siblings} onChange={v => handleUpdate('siblings', v)} />
+                                <Input label="家中排行" type="number" value={data.rank} onChange={v => handleUpdate('rank', v)} />
+                                <div><label className="block font-semibold mb-1">兒子數目</label><select value={data.sonCount} onChange={e => handleUpdate('sonCount', e.target.value ? parseInt(e.target.value) : '')} className="border p-2 rounded w-full mb-2"><option value="">請選擇</option>{[...Array(11).keys()].map(n => <option key={n} value={n}>{n}</option>)}</select>{data.sonCount > 0 && (<div className="flex gap-2 flex-wrap">{[...Array(data.sonCount)].map((_, i) => (<input key={i} placeholder={`兒子${i+1}歲`} className="border p-1 rounded w-20" value={data.sonAges[i] || ''} onChange={e => {const arr = [...(data.sonAges || [])];arr[i] = e.target.value;handleUpdate('sonAges', arr);}} />))}</div>)}</div>
+                                <div><label className="block font-semibold mb-1">女兒數目</label><select value={data.daughterCount} onChange={e => handleUpdate('daughterCount', e.target.value ? parseInt(e.target.value) : '')} className="border p-2 rounded w-full mb-2"><option value="">請選擇</option>{[...Array(11).keys()].map(n => <option key={n} value={n}>{n}</option>)}</select>{data.daughterCount > 0 && (<div className="flex gap-2 flex-wrap">{[...Array(data.daughterCount)].map((_, i) => (<input key={i} placeholder={`女兒${i+1}歲`} className="border p-1 rounded w-20" value={data.daughterAges[i] || ''} onChange={e => {const arr = [...(data.daughterAges || [])];arr[i] = e.target.value;handleUpdate('daughterAges', arr);}} />))}</div>)}</div>
+                                <Input label="外傭 WhatsApp" value={data.whatsapp} onChange={v => handleUpdate('whatsapp', v)} />
+                                <Input label="外傭家鄉電話" value={data.homePhone} onChange={v => handleUpdate('homePhone', v)} />
+                                <Input label="其他電話 (1)" value={data.otherPhone1} onChange={v => handleUpdate('otherPhone1', v)} /><Input label="其他電話 (2)" value={data.otherPhone2} onChange={v => handleUpdate('otherPhone2', v)} /><Input label="其他電話 (3)" value={data.otherPhone3} onChange={v => handleUpdate('otherPhone3', v)} /><Input label="其他電話 (4)" value={data.otherPhone4} onChange={v => handleUpdate('otherPhone4', v)} />
+                                <Input label="外傭家鄉地址" value={data.homeAddress} onChange={v => handleUpdate('homeAddress', v)} />
+                                <Input label="介紹人" value={data.referrer} onChange={v => handleUpdate('referrer', v)} />
+                                <Input label="介紹人 WhatsApp" value={data.referrerWhatsapp} onChange={v => handleUpdate('referrerWhatsapp', v)} />
+                                <Select label="負責同事" value={data.colleague} onChange={v => handleUpdate('colleague', v)} options={STAFF_OPTIONS} />
+                                <div className="mt-2"><label className="block font-semibold">內部備註</label><textarea className="w-full border rounded p-2 resize-y" rows="3" value={data.internalNote} onChange={e => handleUpdate('internalNote', e.target.value)}></textarea></div>
+                                <div className="mt-2"><label className="block font-semibold">公開備註</label><textarea className="w-full border rounded p-2 resize-y" rows="3" value={data.publicNote} onChange={e => handleUpdate('publicNote', e.target.value)}></textarea></div>
+                            </div>
+                        )}
+                        
+                        {tab === 'skills' && (
+                            <div className="flex flex-col gap-6">
+                                <div className="border p-4 rounded bg-gray-50">
+                                    <h3 className="font-bold mb-4 border-b pb-2">能力程度</h3>
+                                    {[{k:'english', l:'英文'}, {k:'cantonese', l:'廣東話'}, {k:'mandarin', l:'普通話'}, {k:'chineseCooking', l:'煮中餐'}, {k:'westernCooking', l:'煮西餐'}].map(item => (
+                                        <div key={item.k} className="mb-4"><label className="block mb-2 font-medium">{item.l}</label><div className="flex gap-2 flex-wrap">{LANG_LEVELS.map(lvl => (<button key={lvl} onClick={() => handleUpdate('languages', {...data.languages, [item.k]: lvl})} className={`px-3 py-1 rounded border text-sm ${data.languages?.[item.k] === lvl ? 'bg-blue-600 text-white' : 'bg-white'}`}>{lvl}</button>))}</div></div>
+                                    ))}
+                                </div>
+                                <div className="border p-4 rounded bg-gray-50">
+                                    <h3 className="font-bold mb-4 border-b pb-2">地區經驗</h3>
+                                    {REGIONS.map(r => {
+                                        const exp = data.regionExp?.find(x => x.region === r) || { region: r, years: '', otherName: '' };
+                                        return (<div key={r} className="flex items-center gap-2 mb-3"><div className="w-24 font-medium">{r}</div>{r === '其他' && <input placeholder="國家名稱" value={exp.otherName} onChange={e => handleUpdate('regionExp', [...(data.regionExp?.filter(x => x.region !== r)||[]), { ...exp, otherName: e.target.value }])} className="border p-1 rounded w-32" />}<input placeholder="年數" value={exp.years} onChange={e => e.target.value ? handleUpdate('regionExp', [...(data.regionExp?.filter(x => x.region !== r)||[]), { ...exp, years: e.target.value }]) : handleUpdate('regionExp', data.regionExp?.filter(x => x.region !== r))} className="border p-1 rounded w-20" /><span>年</span></div>);
+                                    })}
+                                </div>
+                            </div>
+                        )}
+
+                        {tab === 'experience' && (
+                            <div>
+                                <button onClick={() => addExperience(true)} className="w-full py-2 mb-4 border-2 border-dashed border-blue-300 text-blue-600 rounded font-bold hover:bg-blue-50">+ 新增工作經驗 (最新)</button>
+                                {(data.experience || []).map((exp, i) => (<ExperienceItem key={exp.id} index={i} exp={exp} onUpdate={(field, val) => updateExp(i, field, val)} onRemove={() => removeExp(i)} onMove={(dir) => moveExp(i, dir)} regionOptions={settings.workRegions} />))}
+                                <button onClick={() => addExperience(false)} className="w-full py-2 mt-4 border-2 border-dashed border-gray-300 text-gray-500 rounded font-bold hover:bg-gray-100">+ 新增工作經驗 (最舊)</button>
+                            </div>
+                        )}
+
+                        {tab === 'additional' && (
+                            <div className="space-y-2">
+                                {[
+                                    { k: 'q1', l: '你喜歡烹飪嗎？', y: '喜歡', n: '不喜歡' },
+                                    { k: 'q2', l: '你能自學新菜式嗎？', y: '可自學', n: '不可以' },
+                                    { k: 'q3', l: '你有信心烹飪嗎？', y: '有信心', n: '無信心' },
+                                    { k: 'q4', l: '你能唱歌或說故事哄小孩入睡嗎？', y: '可以', n: '不可以' },
+                                    { k: 'q5', l: '你有輔導小孩功課的經驗嗎？', y: '有經驗', n: '無經驗' },
+                                    { k: 'q6', l: '在你取得簽證後，你可以先上班嗎？', y: '先上班', n: '先回鄉' },
+                                    { k: 'q7', l: '你怕狗嗎？', y: '不怕狗', n: '怕狗' },
+                                    { k: 'q8', l: '你怕貓嗎？', y: '不怕貓', n: '怕貓' },
+                                    { k: 'q9', l: '你有紋身嗎？', y: '沒有', n: '有' },
+                                    { k: 'q10', l: '你有吸煙或喝酒習慣嗎？', y: '兩樣無', n: '其中有' },
+                                    { k: 'q11', l: '您有沒有任何過敏、疾病、皮膚過敏、傳染病等？', y: '無', n: '其中有' },
+                                    { k: 'q12', l: '你有沒有長期病患、糖尿病、心臟病、嚴重病、打針、食藥、覆診？', y: '無', n: '其中有' },
+                                    { k: 'q13', l: '你 (求職者/外傭) 是否已閱讀、明白、同意、確認、授權和不反對本公司的個人資訊收集聲明？', y: '同意', n: '不同意' }
+                                ].map(q => (
+                                    <div key={q.k} className="flex flex-col md:flex-row justify-between items-center py-4 border-b">
+                                        <span className="font-medium text-gray-700 w-full md:w-1/2 mb-2 md:mb-0">{q.l}</span>
+                                        <div className="flex gap-4 w-full md:w-1/2 justify-end">
+                                            <button onClick={() => handleUpdate(q.k, q.y)} className={`px-2 py-2 rounded border text-center text-xs w-[63px] ${data[q.k] === q.y ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'}`}>{q.y}</button>
+                                            <button onClick={() => handleUpdate(q.k, q.n)} className={`px-2 py-2 rounded border text-center text-xs w-[63px] ${data[q.k] === q.n ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'}`}>{q.n}</button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        const ExperienceItem = ({ exp, index, onUpdate, onRemove, onMove, regionOptions }) => {
+            /* Same as V1.8 */
+            const [tempMember, setTempMember] = useState({ type: '', startAge: '', endAge: '', quantity: '' });
+            const [tempPet, setTempPet] = useState({ type: '', count: '', otherName: '' });
+            const [tempDisability, setTempDisability] = useState({ type: '', note: '' });
+            const years = Array.from({length: 41}, (_, i) => 1990 + i); 
+            const months = Array.from({length: 12}, (_, i) => i + 1);
+            useEffect(() => {
+                if(exp.startYear && exp.startMonth && exp.endYear && exp.endMonth) {
+                    const sy = parseInt(exp.startYear);
+                    const sm = parseInt(exp.startMonth);
+                    const ey = parseInt(exp.endYear);
+                    const em = parseInt(exp.endMonth);
+                    let totalMonths = (ey - sy) * 12 + (em - sm);
+                    let yrs = totalMonths / 12;
+                    if (yrs < 0) yrs = 0;
+                    const val = Math.floor(yrs * 2) / 2;
+                    onUpdate('workDuration', val.toString());
+                }
+            }, [exp.startYear, exp.startMonth, exp.endYear, exp.endMonth]);
+            const addMember = () => { if(!tempMember.type) return alert("請選擇"); if(tempMember.type !== '成人' && !tempMember.startAge) return alert("請輸入年齡"); if(tempMember.type === '成人' && !tempMember.quantity) return alert("請輸入數量"); onUpdate('members', [...(exp.members || []), {...tempMember}]); setTempMember({ type: '', startAge:'', endAge:'', quantity: '' }); };
+            const addPet = () => { if(!tempPet.type) return alert("請選擇"); if(tempPet.type !== '沒有寵物' && !tempPet.count) return alert("請輸入數量"); onUpdate('pets', [...(exp.pets || []), {...tempPet}]); setTempPet({ type: '', count:'', otherName:'' }); };
+            const addDisability = () => { if(!tempDisability.type) return alert("請選擇"); onUpdate('disabilities', [...(exp.disabilities || []), {...tempDisability}]); setTempDisability({ type: '', note:'' }); };
+            
+            return (
+                <div className="border-2 border-gray-200 rounded-lg p-4 bg-gray-50 mb-4 relative">
+                    <div className="flex justify-between items-center mb-4 border-b pb-2">
+                        <h4 className="font-bold text-lg text-blue-800">工作經驗 #{index + 1}</h4>
+                        <div className="flex gap-2">
+                            <button onClick={() => onMove(-1)} className="btn-outline-green p-2 rounded" title="上移"><i className="fas fa-arrow-up"></i></button>
+                            <button onClick={() => onMove(1)} className="btn-outline-green p-2 rounded" title="下移"><i className="fas fa-arrow-down"></i></button>
+                            <button onClick={() => onUpdate('hidden', !exp.hidden)} className={`p-2 rounded border text-sm ${exp.hidden ? 'bg-gray-200 text-gray-500' : 'text-blue-600 border-blue-600'}`}>{exp.hidden ? '已隱藏' : '隱藏'}</button>
+                            <button onClick={onRemove} className="btn-outline-red p-2 rounded" title="刪除"><i className="fas fa-trash-alt"></i></button>
+                        </div>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                         <div className="flex flex-col gap-2 mb-2"><div className="flex-1"><label className="block text-sm font-bold mb-1">入職日期</label><div className="flex gap-2"><select value={exp.startYear} onChange={e=>onUpdate('startYear', e.target.value)} className="border p-2 rounded w-1/2"><option value="">年份</option>{years.map(y=><option key={y} value={y}>{y}</option>)}</select><select value={exp.startMonth} onChange={e=>onUpdate('startMonth', e.target.value)} className="border p-2 rounded w-1/2"><option value="">月份</option>{months.map(m=><option key={m} value={m}>{m}</option>)}</select></div></div><div className="flex-1"><label className="block text-sm font-bold mb-1">離職日期</label><div className="flex gap-2"><select value={exp.endYear} onChange={e=>onUpdate('endYear', e.target.value)} className="border p-2 rounded w-1/2"><option value="">年份</option>{years.map(y=><option key={y} value={y}>{y}</option>)}</select><select value={exp.endMonth} onChange={e=>onUpdate('endMonth', e.target.value)} className="border p-2 rounded w-1/2"><option value="">月份</option>{months.map(m=><option key={m} value={m}>{m}</option>)}</select></div></div><div className="flex-1"><Input label="工作年期 (自動計算，亦可修改)" value={exp.workDuration} onChange={v => onUpdate('workDuration', v)} placeholder="年" /></div></div>
+                        <Select label="工作地區" value={exp.region} onChange={v => onUpdate('region', v)} options={regionOptions || []} placeholder="請選擇地區" />
+                        <Select label="僱主國籍" value={exp.employerNation} onChange={v => onUpdate('employerNation', v)} options={EMPLOYER_NATIONS} />
+                        <Input label="僱主成員人數" type="number" value={exp.familySize} onChange={v => onUpdate('familySize', v)} />
+                        <Input label="單位面積 (sq ft)" value={exp.houseSize} onChange={v => onUpdate('houseSize', v)} />
+                        <Input label="外傭人數" type="number" value={exp.helperCount} onChange={v => onUpdate('helperCount', v)} />
+                        <Select label="合約狀態" value={exp.contractStatus} onChange={v => onUpdate('contractStatus', v)} options={['完成合約', '非完約', '僱主過身', '僱主移民', '僱主財政問題', '不是簽合約']} placeholder="請選擇" />
+                        <div className="flex flex-col mb-4"><label className="font-bold mb-1">離職原因</label><textarea className="border p-2 rounded w-full resize-y" rows="2" value={exp.reason} onChange={e => onUpdate('reason', e.target.value)}></textarea></div>
+                        <div className="border-t pt-2 mt-2">
+                             <div className="mb-2 bg-white p-2 border"><label className="block text-sm font-bold">照顧成員:</label><div className="flex flex-wrap gap-1 mb-2">{(exp.members||[]).map((m,i)=><span key={i} className="bg-blue-100 px-2 rounded text-sm flex items-center">{m.type} {m.type!=='成人' ? `(${m.startAge}-${m.endAge}歲)` : `(${m.quantity}人)`} <button onClick={()=>{const nm=[...exp.members];nm.splice(i,1);onUpdate('members',nm)}} className="ml-2 text-red-500">×</button></span>)}</div><div className="flex gap-2"><select value={tempMember.type} onChange={e=>setTempMember({...tempMember, type:e.target.value})} className="border p-1 text-sm w-1/4"><option value="">請選擇</option>{['成人', '男孩', '女孩', '雙胞胎', '龍鳳胎', '三胞胎', '公公', '婆婆'].map(o=><option key={o} value={o}>{o}</option>)}</select>{tempMember.type !== '成人' ? <><input placeholder="入職歲數" value={tempMember.startAge} onChange={e=>setTempMember({...tempMember, startAge:e.target.value})} className="border p-1 w-20 text-sm" /><input placeholder="離職歲數" value={tempMember.endAge} onChange={e=>setTempMember({...tempMember, endAge:e.target.value})} className="border p-1 w-20 text-sm" /></> : <input placeholder="數量" type="number" value={tempMember.quantity} onChange={e=>setTempMember({...tempMember, quantity:e.target.value})} className="border p-1 w-20 text-sm" />}<button onClick={addMember} className="bg-green-500 text-white px-2 rounded text-sm">新增</button></div></div>
+                             <div className="mb-2 bg-white p-2 border"><label className="block text-sm font-bold">照顧寵物:</label><div className="flex flex-wrap gap-1 mb-2">{(exp.pets||[]).map((p,i)=><span key={i} className="bg-orange-100 px-2 rounded text-sm flex items-center">{p.type === '其他' ? p.otherName : p.type} {p.type!=='沒有寵物' && `(${p.count})`} <button onClick={()=>{const np=[...exp.pets];np.splice(i,1);onUpdate('pets',np)}} className="ml-2 text-red-500">×</button></span>)}</div><div className="flex gap-2"><select value={tempPet.type} onChange={e=>setTempPet({...tempPet, type:e.target.value})} className="border p-1 text-sm"><option value="">請選擇</option>{['小狗', '中狗', '大狗', '貓', '兔', '鸚鵡', '烏龜', '沒有寵物', '其他'].map(o=><option key={o} value={o}>{o}</option>)}</select>{tempPet.type === '沒有寵物' ? <button onClick={addPet} className="bg-green-500 text-white px-4 rounded text-sm ml-2">新增</button> : <>{tempPet.type === '其他' && <input type="text" placeholder="寵物類別" value={tempPet.otherName} onChange={e=>setTempPet({...tempPet, otherName:e.target.value})} className="border p-1 w-24 text-sm" />}<input type="number" placeholder="數量" value={tempPet.count} onChange={e=>setTempPet({...tempPet, count:e.target.value})} className="border p-1 w-20 text-sm" /><button onClick={addPet} className="bg-green-500 text-white px-2 rounded text-sm">新增</button></>}</div></div>
+                             <div className="mb-3 bg-white p-3 rounded border"><label className="block text-sm font-semibold mb-2">照顧傷殘:</label><div className="flex flex-wrap gap-2 mb-2">{(exp.disabilities || []).map((d, i) => (<span key={i} className="bg-red-100 text-red-800 px-2 py-1 rounded text-sm flex items-center">{d.type === '其他' ? d.note : d.type} <button onClick={() => {const nd = [...(exp.disabilities || [])]; nd.splice(i, 1);onUpdate('disabilities', nd);}} className="ml-2 text-red-500">×</button></span>))}</div><div className="flex gap-2 items-end"><div className="w-1/3"><select value={tempDisability.type} onChange={e => setTempDisability({...tempDisability, type: e.target.value})} className="border p-1 w-full text-sm"><option value="">請選擇</option>{['身體殘疾', '卧床不起', '照顧插喉', '推輪椅', '走路緩慢', '餵藥', '幫沖涼', '中風', '老人痴呆', '柏金遜症', '其他'].map(o => <option key={o} value={o}>{o}</option>)}</select></div>{tempDisability.type === '其他' && <input type="text" placeholder="描述內容" value={tempDisability.note} onChange={e => setTempDisability({...tempDisability, note: e.target.value})} className="border p-1 w-1/2 text-sm" />}<button onClick={addDisability} className="bg-green-500 text-white px-3 py-1 rounded text-sm">新增</button></div></div>
+                             <div className="mt-2"><label className="font-bold block mb-1">職責:</label><div className="flex flex-wrap gap-2">{['家務', '日常清潔', '洗車', '洗衣服', '熨衣服', '超市買食物', '街市買食物', '煮中餐', '煮西餐', '共用房間', '輔導小孩功課', '說故事哄小孩入睡', '唱歌哄小孩入睡', '澆花', '駕駛'].map(tag => (<label key={tag} className="inline-flex items-center space-x-1 cursor-pointer bg-white px-2 py-1 border rounded"><input type="checkbox" checked={(exp.tags || []).includes(tag)} onChange={() => {const tags = exp.tags || [];onUpdate('tags', tags.includes(tag) ? tags.filter(t => t !== tag) : [...tags, tag]);}} /><span className="text-sm">{tag}</span></label>))}</div></div>
+                             <div className="mt-4"><label className="block font-bold mb-1">內部備註 (如有)</label><textarea className="w-full border-2 border-yellow-200 bg-yellow-50 p-2 rounded h-24" value={exp.otherDuty} onChange={e => onUpdate('otherDuty', e.target.value)} placeholder="輸入備註..."></textarea></div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // 3. Helper List & 4. Filter Page (Same as V1.8)
+        const HelperList = ({ helpers, onSelect, onEdit, onDelete, onAdd, schoolOptions }) => {
+            /* ... (Code omitted for brevity - same as V1.8) ... */
+            const [status, setStatus] = useState('所有');
+            const [deepSearch, setDeepSearch] = useState('');
+            const [searchNat, setSearchNat] = useState('所有國籍');
+            const [searchType, setSearchType] = useState('所有申請類別');
+            const [searchSchool, setSearchSchool] = useState('所有學校');
+            const [page, setPage] = useState(1);
+            const itemsPerPage = 10;
+            const filtered = useMemo(() => {
+                let res = helpers;
+                if (status !== '所有') res = res.filter(h => h.status === status);
+                if (deepSearch) { const low = deepSearch.toLowerCase(); res = res.filter(h => JSON.stringify(h).toLowerCase().includes(low)); }
+                if (searchNat !== '所有國籍') res = res.filter(h => h.nationality === searchNat);
+                if (searchType !== '所有申請類別') res = res.filter(h => h.type === searchType);
+                if (searchSchool !== '所有學校') res = res.filter(h => h.school === searchSchool);
+                return res;
+            }, [helpers, status, deepSearch, searchNat, searchType, searchSchool]);
+            const paginated = filtered.slice((page-1)*itemsPerPage, page*itemsPerPage);
+            const totalPages = Math.ceil(filtered.length / itemsPerPage);
+            return (
+                <div className="p-4 space-y-4">
+                     <div className="flex justify-between items-center mb-2"><h2 className="text-xl font-bold">外傭資料庫</h2><button onClick={onAdd} className="bg-green-600 text-white px-4 py-2 rounded font-bold hover:bg-green-700">+ 新增外傭</button></div>
+                    <div className="flex flex-col md:flex-row gap-4 items-end"><Input label="深入搜尋資料" placeholder="搜尋任何文字或數字..." value={deepSearch} onChange={setDeepSearch} className="flex-1 mb-0" /><Select label="國籍" value={searchNat} onChange={setSearchNat} options={['所有國籍', '菲律賓', '印尼']} className="w-32 mb-0" /><Select label="申請類別" value={searchType} onChange={setSearchType} options={['所有申請類別', '海外外傭', '本地完約', '特別個案']} className="w-40 mb-0" /><Select label="學校" value={searchSchool} onChange={setSearchSchool} options={schoolOptions} className="w-32 mb-0" /></div>
+                    <div className="flex overflow-x-auto gap-2 pb-2">{STATUS_TABS.map(s => <button key={s} onClick={() => {setStatus(s); setPage(1);}} className={`px-4 py-2 rounded whitespace-nowrap ${status===s ? 'bg-blue-600 text-white' : 'bg-white border'}`}>{s}</button>)}</div>
+                    <div className="bg-white rounded shadow overflow-hidden"><table className="w-full text-left"><thead className="bg-gray-100 text-sm"><tr><th className="p-3">操作</th><th className="p-3">照片</th><th className="p-3">編號</th><th className="p-3">姓名</th><th className="p-3">國籍</th><th className="p-3">申請類別</th><th className="p-3">狀態</th></tr></thead><tbody className="divide-y">{paginated.map(h => (<tr key={h.id} className="hover:bg-blue-50"><td className="p-3 space-x-2"><button onClick={() => onSelect(h)} className="text-blue-600 text-sm border px-2 rounded">查閱</button><button onClick={() => onEdit(h)} className="text-orange-600 text-sm border px-2 rounded">修改</button><button onClick={() => onDelete(h.id)} className="text-red-600 text-sm border px-2 rounded">刪除</button></td><td className="p-3"><img src={h.photo} className="h-10 w-10 rounded object-cover bg-gray-200" /></td><td className="p-3 font-bold">{h.refNo}</td><td className="p-3">{h.name}</td><td className="p-3">{h.nationality}</td><td className="p-3 text-sm">{h.type}</td><td className="p-3 text-sm">{h.status}</td></tr>))}</tbody></table></div>
+                    {totalPages > 1 && <div className="flex justify-center gap-2 mt-4"><button disabled={page===1} onClick={()=>setPage(page-1)} className="border px-2">Prev</button><span>{page}/{totalPages}</span><button disabled={page===totalPages} onClick={()=>setPage(page+1)} className="border px-2">Next</button></div>}
+                </div>
+            );
+        };
+
+        const FilterPage = ({ helpers, onSelect }) => {
+            /* ... (Code omitted for brevity - same as V1.8) ... */
+            const [filter, setFilter] = useState({ nats: [], types: [], maritals: [], langs: [], exps: [], zodiacs: [], horoscopes: [], ageFrom: '', ageTo: '', regionExp: [], educations: [], religions: [], availability: [] });
+            const [results, setResults] = useState(null);
+            const CheckboxGroup = ({ label, options, selected, onChange }) => (<div className="mb-4"><label className="block font-semibold mb-2 text-gray-700">{label}</label><div className="flex flex-wrap gap-2">{options.map(opt => (<div key={opt} onClick={() => onChange(selected.includes(opt) ? selected.filter(i => i !== opt) : [...selected, opt])} className={`px-3 py-1 border rounded cursor-pointer text-sm ${selected.includes(opt) ? 'bg-blue-100 border-blue-500 text-blue-700' : 'bg-white'}`}>{opt}</div>))}</div></div>);
+            const doSearch = () => {
+                const res = helpers.filter(h => {
+                    if (h.status !== '已上架') return false;
+                    if (filter.nats.length && !filter.nats.includes(h.nationality)) return false;
+                    if (filter.types.length && !filter.types.some(t => (t === '海外外傭' && h.type === '海外外傭') || (t === '本地完約' && (h.type === '本地完約' || h.type === '特別個案')))) return false;
+                    if (filter.maritals.length && !filter.maritals.includes(h.marital)) return false;
+                    if (filter.educations.length && !filter.educations.includes(h.education)) return false;
+                    if (filter.religions.length && !filter.religions.includes(h.religion)) return false;
+                    if (filter.regionExp.length && !filter.regionExp.some(r => h.regionExp?.some(e => e.region === r))) return false;
+                    if (filter.langs.length && !filter.langs.every(l => (l==='英文'&&['中等','良好'].includes(h.languages?.english)) || (l==='廣東話'&&['中等','良好'].includes(h.languages?.cantonese)) || (l==='普通話'&&['中等','良好'].includes(h.languages?.mandarin)))) return false;
+                    const age = parseInt(getAge(h.dob));
+                    if (filter.ageFrom && age < parseInt(filter.ageFrom)) return false;
+                    if (filter.ageTo && age > parseInt(filter.ageTo)) return false;
+                    if (filter.zodiacs.length && !filter.zodiacs.includes(getZodiac(h.dob))) return false;
+                    if (filter.horoscopes.length && !filter.horoscopes.includes(getHoroscope(h.dob))) return false;
+                    if (filter.availability.length) { const monthMap = {'1':'一月','2':'二月','3':'三月','4':'四月','5':'五月','6':'六月','7':'七月','8':'八月','9':'九月','10':'十月','11':'十一月','12':'十二月'}; if(!(h.experience||[]).some(e => filter.availability.includes(monthMap[e.endMonth]))) return false; }
+                    if (filter.exps.length) { const matchesExp = filter.exps.every(req => { if(req==='煮食') return ['中等','良好'].includes(h.languages?.chineseCooking)||['中等','良好'].includes(h.languages?.westernCooking); const allExps = (h.experience||[]).filter(e=>!e.hidden); if(req==='嬰兒') return allExps.some(e=>(e.members||[]).some(m=>{const age=parseFloat(m.startAge);return age>=0&&age<=1.5;})); if(req==='小孩') return allExps.some(e=>(e.members||[]).some(m=>{const age=parseFloat(m.startAge);return age>1&&age<=17;})); if(req==='長者') return allExps.some(e=>(e.members||[]).some(m=>{const age=parseFloat(m.startAge);return age>=60&&age<=120;})); if(req==='寵物') return allExps.some(e=>(e.pets||[]).some(p=>p.type!=='沒有寵物')); if(req==='傷殘') return allExps.some(e=>(e.disabilities||[]).length>0); if(req==='駕駛') return allExps.some(e=>(e.tags||[]).includes('駕駛')); return false; }); if(!matchesExp) return false; }
+                    return true;
+                });
+                setResults(res);
+            };
+            return (
+                <div className="p-6">
+                    <h2 className="text-2xl font-bold mb-4">外傭篩選器</h2>
+                    <div className="bg-white p-6 rounded shadow space-y-4">
+                        <CheckboxGroup label="申請類別" options={['海外外傭', '本地完約']} selected={filter.types} onChange={v => setFilter({...filter, types: v})} />
+                        <CheckboxGroup label="國籍" options={['菲律賓', '印尼']} selected={filter.nats} onChange={v => setFilter({...filter, nats: v})} />
+                        <CheckboxGroup label="語言" options={['英文', '廣東話', '普通話']} selected={filter.langs} onChange={v => setFilter({...filter, langs: v})} />
+                        <div className="mb-4"><label className="block font-semibold mb-2">年齡</label><div className="flex gap-2 items-center"><input type="number" placeholder="由" value={filter.ageFrom} onChange={e => setFilter({...filter, ageFrom: e.target.value})} className="border p-1 w-20 rounded" /><span>至</span><input type="number" placeholder="至" value={filter.ageTo} onChange={e => setFilter({...filter, ageTo: e.target.value})} className="border p-1 w-20 rounded" /></div></div>
+                        <CheckboxGroup label="工作經驗" options={['嬰兒', '小孩', '長者', '傷殘', '寵物', '駕駛', '煮食']} selected={filter.exps} onChange={v => setFilter({...filter, exps: v})} />
+                        <CheckboxGroup label="婚姻狀況" options={['未婚', '已婚', '離婚', '分居', '單親', '喪偶', '有伴侶']} selected={filter.maritals} onChange={v => setFilter({...filter, maritals: v})} />
+                        <CheckboxGroup label="地區經驗" options={REGIONS} selected={filter.regionExp} onChange={v => setFilter({...filter, regionExp: v})} />
+                        <CheckboxGroup label="學歷" options={['小學', '中學', '大專', '大學']} selected={filter.educations} onChange={v => setFilter({...filter, educations: v})} />
+                        <CheckboxGroup label="宗教" options={['天主教', '基督教', '伊斯蘭教', '佛教', '無', '其他']} selected={filter.religions} onChange={v => setFilter({...filter, religions: v})} />
+                        <CheckboxGroup label="生肖" options={ZODIACS} selected={filter.zodiacs} onChange={v => setFilter({...filter, zodiacs: v})} />
+                        <CheckboxGroup label="星座" options={HOROSCOPES} selected={filter.horoscopes} onChange={v => setFilter({...filter, horoscopes: v})} />
+                        <CheckboxGroup label="預計上班" options={MONTHS} selected={filter.availability} onChange={v => setFilter({...filter, availability: v})} />
+                        <div className="flex gap-4 pt-4 border-t"><button onClick={doSearch} className="flex-1 bg-amber-400 py-3 rounded font-bold hover:bg-amber-500">篩選</button><button onClick={() => {setFilter({nats:[],types:[],maritals:[],langs:[],exps:[],zodiacs:[],horoscopes:[],ageFrom:'',ageTo:'',regionExp:[],educations:[],religions:[],availability:[]}); setResults(null);}} className="px-6 border rounded hover:bg-gray-100">重設篩選</button></div>
+                    </div>
+                    {results && (<div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">{results.length === 0 ? <div>沒有結果</div> : results.map(h => (<div key={h.id} className="bg-white rounded border flex overflow-hidden p-2 gap-2 cursor-pointer hover:shadow-md" onClick={() => onSelect(h)}><img src={h.photo} className="w-24 h-24 object-cover bg-gray-200" /><div><div className="font-bold text-blue-900">{h.refNo}</div><div>{h.nationality}</div><div className="text-xs bg-gray-100 px-1 rounded">{getAge(h.dob)}歲</div></div></div>))}</div>)}
+                </div>
+            );
+        };
+
+        // 5. New Helper Detail View (PDF Style)
+        const HelperDetail = ({ helper, onClose, isPublic }) => {
+            const age = getAge(helper.dob);
+            const bmi = calculateBMI(helper.height, helper.weight);
+            const zodiac = getZodiac(helper.dob);
+            
+            // Helper for checkmarks
+            const Check = ({ val }) => <span className="checkmark">{val ? '☑' : '☐'}</span>;
+            
+            // Helper for language level
+            const LangRow = ({ lang, level }) => (
+                <tr>
+                    <td>{lang}</td>
+                    <td className="text-center">{level === '不選擇' ? '☑' : '☐'}</td>
+                    <td className="text-center">{level === '學習中' || level === '基本' ? '☑' : '☐'}</td>
+                    <td className="text-center">{level === '中等' ? '☑' : '☐'}</td>
+                    <td className="text-center">{level === '良好' ? '☑' : '☐'}</td>
+                </tr>
+            );
+
+            return (
+                 <div className={`fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 overflow-y-auto ${isPublic ? 'bg-gray-100' : ''}`}>
+                    <div className="bg-white w-full max-w-5xl shadow-xl overflow-hidden max-h-[95vh] overflow-y-auto relative pdf-container">
+                        {!isPublic && <div className="sticky-nav bg-slate-800 text-white p-3 flex justify-between items-center no-print"><div>{helper.refNo} 資料</div><button onClick={onClose}><i className="fas fa-times"></i></button></div>}
+                        
+                        {/* Page 1 */}
+                        <div className="pdf-page bg-white">
+                            {/* Header */}
+                            <div className="flex justify-between items-start mb-4 border-b pb-2">
+                                <div>
+                                    <h1 className="text-2xl font-bold text-blue-800">維港專業僱傭中心</h1>
+                                    <div className="text-sm text-gray-600">Horizon Employment Agency</div>
+                                    <div className="text-xs mt-1">Quality Employment Service Recognition | 優質僱傭服務認證</div>
+                                </div>
+                                <div className="text-right text-xs">
+                                    <div className="font-bold">Four Pledges 四大保證</div>
+                                    <div>真・全額退款</div>
+                                    <div>真・誠實收費</div>
+                                    <div>真・無限面試</div>
+                                    <div>真・無限詢問</div>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-4">
+                                {/* Left Column: Particulars */}
+                                <div className="flex-1">
+                                    <h2 className="text-lg font-bold mb-2 bg-blue-100 p-1">外傭資料 Helper Particulars</h2>
+                                    <table className="detail-table mb-4">
+                                        <tbody>
+                                            <tr><td className="detail-label">國籍 Nationality</td><td>{helper.nationality}</td><td className="detail-label">外傭編號 Ref No.</td><td>{helper.refNo}</td></tr>
+                                            <tr><td className="detail-label">年齡 Age</td><td>{age} 歲</td><td className="detail-label">外傭類別 Type</td><td>{helper.type}</td></tr>
+                                            <tr><td className="detail-label">生肖 Zodiac</td><td>{zodiac}</td><td className="detail-label">合約完結 Contract End</td><td>{helper.contractEnd}</td></tr>
+                                            <tr><td className="detail-label">身高 Height</td><td>{helper.height} cm</td><td className="detail-label">體重 Weight</td><td>{helper.weight} kg</td></tr>
+                                            <tr><td className="detail-label">BMI</td><td>{bmi}</td><td className="detail-label">性別 Gender</td><td>{helper.sex === 'F' || helper.sex === '女' ? '女 Female' : '男 Male'}</td></tr>
+                                            <tr><td className="detail-label">出生日期 DOB</td><td>{helper.dob}</td><td className="detail-label">婚姻 Marital</td><td>{helper.marital}</td></tr>
+                                            <tr><td className="detail-label">宗教 Religion</td><td>{helper.religion}</td><td className="detail-label">學歷 Education</td><td>{helper.education}</td></tr>
+                                        </tbody>
+                                    </table>
+
+                                    <h2 className="text-lg font-bold mb-2 bg-blue-100 p-1">家庭背景 Family Background</h2>
+                                    <table className="detail-table mb-4">
+                                        <tbody>
+                                            <tr><td className="detail-label">兄弟姊妹 Siblings</td><td>{helper.siblings}</td><td className="detail-label">家中排行 Rank</td><td>{helper.rank}</td></tr>
+                                            <tr><td className="detail-label">子女 Children</td><td colSpan="3">
+                                                {helper.sonCount > 0 && <span>兒子: {helper.sonCount} ({helper.sonAges.join(', ')}歲) </span>}
+                                                {helper.daughterCount > 0 && <span>女兒: {helper.daughterCount} ({helper.daughterAges.join(', ')}歲)</span>}
+                                            </td></tr>
+                                        </tbody>
+                                    </table>
+
+                                    <div className="flex gap-4 mb-4">
+                                        <div className="flex-1">
+                                            <h2 className="text-lg font-bold mb-2 bg-blue-100 p-1">語言能力 Language</h2>
+                                            <table className="detail-table">
+                                                <thead><tr><th>語言</th><th>不懂</th><th>基本</th><th>中等</th><th>良好</th></tr></thead>
+                                                <tbody>
+                                                    <LangRow lang="英語 English" level={helper.languages.english} />
+                                                    <LangRow lang="廣東話 Cantonese" level={helper.languages.cantonese} />
+                                                    <LangRow lang="普通話 Mandarin" level={helper.languages.mandarin} />
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <div className="w-1/3">
+                                            <h2 className="text-lg font-bold mb-2 bg-blue-100 p-1">烹飪 Cooking</h2>
+                                            <div className="border p-2 text-sm">
+                                                <div><Check val={helper.q1 === '喜歡'} /> 喜歡烹飪 Love to cook</div>
+                                                <div><Check val={helper.q2 === '可自學'} /> 能自學菜式 Self learning</div>
+                                                <div><Check val={helper.q3 === '有信心'} /> 有信心烹飪 Confident</div>
+                                                <div className="mt-2 pt-2 border-t">
+                                                    <div>中餐: {helper.languages.chineseCooking}</div>
+                                                    <div>西餐: {helper.languages.westernCooking}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <h2 className="text-lg font-bold mb-2 bg-blue-100 p-1">地區經驗 Regional Experience</h2>
+                                    <div className="flex flex-wrap gap-2 border p-2 mb-4">
+                                        {(helper.regionExp || []).map((r, i) => (
+                                            <div key={i} className="border px-2 py-1 bg-gray-50 rounded">
+                                                <span className="font-bold">{r.region === '其他' ? r.otherName : r.region}</span>: {r.years} 年
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Right Column: Photo */}
+                                <div className="w-64 flex flex-col items-center">
+                                    <div className="border-4 border-gray-300 w-full h-80 bg-gray-100 mb-2 flex items-center justify-center overflow-hidden">
+                                        {helper.photo ? <img src={helper.photo} className="w-full h-full object-cover" /> : <span className="text-gray-400">No Photo</span>}
+                                    </div>
+                                    <div className="text-center font-bold text-xl">{helper.refNo}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Page Break */}
+                        <div className="page-break"></div>
+
+                        {/* Page 2 */}
+                        <div className="pdf-page bg-white">
+                            <h2 className="text-xl font-bold mb-4 border-b pb-2">工作經驗 Work Experience</h2>
+                            
+                            {(helper.experience || []).map((exp, i) => (
+                                <div key={i} className="mb-6 border p-4 rounded-lg bg-gray-50 break-inside-avoid">
+                                    <h3 className="font-bold text-lg mb-2 text-blue-800">{i === 0 ? "最近僱主 Recent Employer" : "前任僱主 Previous Employer"}</h3>
+                                    <table className="detail-table mb-2 bg-white">
+                                        <tbody>
+                                            <tr>
+                                                <td className="detail-label" width="15%">工作地點 Location</td><td width="35%">{exp.region}</td>
+                                                <td className="detail-label" width="15%">工作年期 Period</td><td width="35%">{exp.startYear}/{exp.startMonth} - {exp.endYear}/{exp.endMonth} ({exp.workDuration}年)</td>
+                                            </tr>
+                                            <tr>
+                                                <td className="detail-label">單位面積 Size</td><td>{exp.houseSize} sq ft</td>
+                                                <td className="detail-label">家庭人數 Family Size</td><td>{exp.familySize} 人</td>
+                                            </tr>
+                                            <tr>
+                                                <td className="detail-label">僱主國籍 Nationality</td><td>{exp.employerNation}</td>
+                                                <td className="detail-label">外傭人數 Helpers</td><td>{exp.helperCount} 人</td>
+                                            </tr>
+                                            <tr>
+                                                <td className="detail-label">離職原因 Reason</td><td colSpan="3">{exp.reason}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                    
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <div className="font-bold text-sm mb-1">照顧成員 Care Duties:</div>
+                                            <div className="flex flex-wrap gap-1">
+                                                {(exp.members || []).map((m, idx) => (
+                                                    <span key={idx} className="bg-blue-100 px-2 py-1 rounded text-xs border border-blue-200">
+                                                        {m.type} {m.type !== '成人' ? `(${m.startAge}-${m.endAge}歲)` : `(${m.quantity}人)`}
+                                                    </span>
+                                                ))}
+                                                {(exp.members || []).length === 0 && <span className="text-gray-400 text-sm">-</span>}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div className="font-bold text-sm mb-1">其他職責 Duties:</div>
+                                            <div className="flex flex-wrap gap-1">
+                                                {(exp.tags || []).map((t, idx) => <span key={idx} className="bg-gray-100 px-2 py-1 rounded text-xs border">☑ {t}</span>)}
+                                                {(exp.pets || []).length > 0 && <span className="bg-orange-100 px-2 py-1 rounded text-xs border border-orange-200">☑ 寵物</span>}
+                                                {(exp.disabilities || []).length > 0 && <span className="bg-red-100 px-2 py-1 rounded text-xs border border-red-200">☑ 傷殘護理</span>}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    {(exp.pets || []).length > 0 && (
+                                        <div className="mt-2 text-sm"><span className="font-bold">寵物細節:</span> {exp.pets.map(p => `${p.type === '其他' ? p.otherName : p.type}(${p.count})`).join(', ')}</div>
+                                    )}
+                                    {(exp.disabilities || []).length > 0 && (
+                                        <div className="mt-2 text-sm"><span className="font-bold">傷殘護理細節:</span> {exp.disabilities.map(d => `${d.type === '其他' ? d.note : d.type}`).join(', ')}</div>
+                                    )}
+                                </div>
+                            ))}
+
+                            <div className="mt-8 pt-4 border-t text-xs text-gray-500 text-justify">
+                                <strong>免責聲明 Disclaimer:</strong> 這兩頁的所有資料由求職者/外傭提供, 内容只供參考用途, 本公司亦建議準僱主及其成員親自面試求職者/外傭, 以對他/她有較佳了解。本公司不保證和不考究以上資料是否均屬正確、完備、真實、閣下和其他閱讀者應自行判斷和自負風險, 本公司概不負責。使用或閱讀以上資料, 即表示您/您們接受本免責聲明。謝謝。<br/>
+                                All information are provided by the job-seeker/helper, all content are for reference only. Our employment agency also advises prospective employers and their members to conduct an interview for a better understanding. Our employment agency does not guarantee accurate, complete and true.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [user, setUser] = useState(null);
+            const [page, setPage] = useState('list'); 
+            const [helpers, setHelpers] = useState([]);
+            const [settings, setSettings] = useState({ schools: [], workRegions: [] });
+            const [viewHelper, setViewHelper] = useState(null);
+            const [editHelper, setEditHelper] = useState(null);
+            const [publicViewId, setPublicViewId] = useState(null);
+
+            useEffect(() => {
+                const params = new URLSearchParams(window.location.search);
+                if (params.get('view') === 'public' && params.get('id')) setPublicViewId(params.get('id'));
+                setHelpers(StorageService.getHelpers());
+                setSettings(StorageService.getSettings());
+            }, [page]); 
+
+            if (publicViewId) {
+                const target = helpers.find(h => h.id === publicViewId) || StorageService.getHelpers().find(h => h.id === publicViewId);
+                return target ? <HelperDetail helper={target} isPublic={true} onClose={()=>{}} /> : <div className="p-10 text-center">Not Found</div>;
+            }
+
+            const login = (p) => p === ADMIN_PASS ? setUser({ name: 'Admin' }) : alert('密碼錯誤');
+            const logout = () => setUser(null);
+            const saveData = (d) => { StorageService.saveHelper(d); setHelpers(StorageService.getHelpers()); setPage('list'); setEditHelper(null); };
+            const deleteData = (id) => { if(prompt("密碼")===ADMIN_PASS) { StorageService.deleteHelper(id); setHelpers(StorageService.getHelpers()); setPage('list'); } else alert("Error"); };
+
+            if (!user) return (
+                <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
+                    <div className="bg-white p-8 rounded shadow w-96">
+                        <h1 className="text-2xl font-bold mb-4 text-center">HMS 登入</h1>
+                        <form onSubmit={e=>{e.preventDefault(); login(e.target.pass.value);}}><input name="pass" type="password" className="border w-full p-2 rounded mb-4" placeholder="密碼" /><button className="bg-blue-600 text-white w-full py-2 rounded">登入</button></form>
+                    </div>
+                    <div className="mt-4 text-gray-400">V1.9</div>
+                </div>
+            );
+
+            return (
+                <div className="min-h-screen flex flex-col md:flex-row">
+                    <div className="bg-slate-800 text-white w-64 flex-col h-screen sticky top-0 no-print flex">
+                        <div className="p-4 text-2xl font-bold border-b border-slate-700">HMS</div>
+                        <nav className="flex-1 p-2 space-y-2">
+                            <button onClick={()=>setPage('list')} className={`w-full text-left p-3 rounded ${page==='list'?'bg-blue-700':'hover:bg-slate-700'}`}><i className="fas fa-users w-8"></i> 外傭資料庫</button>
+                            <button onClick={()=>setPage('filter')} className={`w-full text-left p-3 rounded ${page==='filter'?'bg-blue-700':'hover:bg-slate-700'}`}><i className="fas fa-filter w-8"></i> 外傭篩選器</button>
+                        </nav>
+                        <div className="p-4 border-t border-slate-700">
+                            <button onClick={()=>setPage('settings')} className="w-full text-left p-2 hover:bg-slate-700 rounded mb-2 text-sm"><i className="fas fa-cog w-6"></i> 系統設定</button>
+                            <button onClick={logout} className="w-full bg-red-600 py-1 rounded text-sm">登出</button>
+                            <div className="text-xs text-slate-500 mt-2">V1.9</div>
+                        </div>
+                    </div>
+                    <div className="flex-1 bg-gray-50 overflow-x-hidden">
+                        {page === 'list' && <HelperList helpers={helpers} onSelect={setViewHelper} onEdit={h=>{setEditHelper(h);setPage('form');}} onDelete={deleteData} onAdd={()=>{setEditHelper(null);setPage('form');}} schoolOptions={settings.schools} />}
+                        {page === 'filter' && <FilterPage helpers={helpers} onSelect={setViewHelper} />}
+                        {page === 'form' && <HelperForm initialData={editHelper} onSave={saveData} onCancel={()=>setPage('list')} onDelete={deleteData} schoolOptions={settings.schools} settings={settings} />}
+                        {page === 'settings' && <SettingsPage onBack={()=>setPage('list')} />}
+                    </div>
+                    {viewHelper && <HelperDetail helper={viewHelper} onClose={()=>setViewHelper(null)} />}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
