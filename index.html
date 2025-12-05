@@ -1,9 +1,11 @@
+https://gemini.google.com/share/04057e296505
+
 <!DOCTYPE html>
 <html lang="zh-HK">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HMS - Helper Management System V1.9</title>
+    <title>HMS - Helper Management System V1.10</title>
     
     <!-- React & ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -17,6 +19,25 @@
     
     <!-- Icons -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
+    <!-- 
+      === FIREBASE INTEGRATION GUIDE ===
+      要連接到 Firebase，請執行以下步驟：
+      
+      1. 前往 https://console.firebase.google.com/ 建立一個新專案。
+      2. 在專案設定中，選擇 "Add app" -> "Web" (</>)。
+      3. 複製 firebaseConfig 物件的內容。
+      4. 在下方 <script> 標籤中，取消註釋 Firebase 相關代碼。
+      5. 將您的 firebaseConfig 貼入。
+      6. 在 Firebase Console -> Firestore Database，建立資料庫並設定規則 (例如測試模式 allow read, write: if true;)。
+      7. 此代碼目前的 StorageService 使用 localStorage。若要使用 Firebase：
+         - 移除 StorageService 的 localStorage 邏輯。
+         - 使用 db.collection('helpers').add(data) 來儲存。
+         - 使用 db.collection('helpers').onSnapshot() 來讀取。
+         - 對於圖片，建議使用 Firebase Storage (storage.ref().put(file)) 並獲取 downloadURL 存入 Firestore。
+         
+      注意：由於此為單一 HTML 文件演示，下方代碼仍使用 localStorage 以確保您下載後可立即離線使用。
+    -->
 
     <style>
         /* Global Font Size Requirement */
@@ -121,7 +142,8 @@
 
     <script type="text/babel">
         // --- Configuration ---
-        const appId = 'hms-local-v1.9';
+        const appId = 'hms-local-v1.10';
+const firebaseConfig = {
         const ADMIN_PASS = 'admin@ADA2018';
 
         // --- Data Lists ---
@@ -357,7 +379,6 @@
 
         // 1. Settings Page
         const SettingsPage = ({ onBack }) => {
-            /* ... (SettingsPage code same as V1.8) ... */
             const [settings, setSettings] = useState(StorageService.getSettings());
             const [newItem, setNewItem] = useState('');
             const [activeTab, setActiveTab] = useState('schools');
@@ -402,8 +423,11 @@
 
             return (
                 <div className="p-6">
-                    <button onClick={onBack} className="mb-4 text-gray-500">&larr; 返回</button>
-                    <h2 className="text-2xl font-bold mb-6">系統設定</h2>
+                    <div className="flex items-center mb-4 border-b pb-2">
+                        <button onClick={onBack} className="mr-4 text-gray-600 border px-3 py-1 rounded hover:bg-gray-100">← 返回</button>
+                        <h2 className="text-2xl font-bold">系統設定</h2>
+                    </div>
+                    
                     <div className="flex gap-4 mb-4">
                         <button onClick={() => setActiveTab('schools')} className={`px-4 py-2 rounded ${activeTab==='schools'?'bg-blue-600 text-white':'bg-gray-200'}`}>學校清單設定</button>
                         <button onClick={() => setActiveTab('workRegions')} className={`px-4 py-2 rounded ${activeTab==='workRegions'?'bg-blue-600 text-white':'bg-gray-200'}`}>工作地區設定</button>
@@ -482,8 +506,7 @@
             const getPublicLink = () => { 
                 if (!data.id) return alert("請先儲存資料以獲取連結");
                 const url = `${window.location.origin}${window.location.pathname}?view=public&id=${data.id}`;
-                navigator.clipboard.writeText(url);
-                alert("已複製連結: " + url);
+                window.open(url, '_blank');
             };
             const zodiac = getZodiac(data.dob);
             const horoscope = getHoroscope(data.dob);
@@ -606,8 +629,8 @@
                                     <div key={q.k} className="flex flex-col md:flex-row justify-between items-center py-4 border-b">
                                         <span className="font-medium text-gray-700 w-full md:w-1/2 mb-2 md:mb-0">{q.l}</span>
                                         <div className="flex gap-4 w-full md:w-1/2 justify-end">
-                                            <button onClick={() => handleUpdate(q.k, q.y)} className={`px-2 py-2 rounded border text-center text-xs w-[63px] ${data[q.k] === q.y ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'}`}>{q.y}</button>
-                                            <button onClick={() => handleUpdate(q.k, q.n)} className={`px-2 py-2 rounded border text-center text-xs w-[63px] ${data[q.k] === q.n ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'}`}>{q.n}</button>
+                                            <button onClick={() => handleUpdate(q.k, q.y)} className={`px-2 py-2 rounded border text-center text-xs w-[76px] ${data[q.k] === q.y ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'}`}>{q.y}</button>
+                                            <button onClick={() => handleUpdate(q.k, q.n)} className={`px-2 py-2 rounded border text-center text-xs w-[76px] ${data[q.k] === q.n ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'}`}>{q.n}</button>
                                         </div>
                                     </div>
                                 ))}
@@ -674,9 +697,8 @@
             );
         };
 
-        // 3. Helper List & 4. Filter Page (Same as V1.8)
+        // 3. Helper List & 4. Filter Page (Updated as requested)
         const HelperList = ({ helpers, onSelect, onEdit, onDelete, onAdd, schoolOptions }) => {
-            /* ... (Code omitted for brevity - same as V1.8) ... */
             const [status, setStatus] = useState('所有');
             const [deepSearch, setDeepSearch] = useState('');
             const [searchNat, setSearchNat] = useState('所有國籍');
@@ -695,25 +717,29 @@
             }, [helpers, status, deepSearch, searchNat, searchType, searchSchool]);
             const paginated = filtered.slice((page-1)*itemsPerPage, page*itemsPerPage);
             const totalPages = Math.ceil(filtered.length / itemsPerPage);
+            const openPublicPage = (id) => {
+                const url = `${window.location.origin}${window.location.pathname}?view=public&id=${id}`;
+                window.open(url, '_blank');
+            };
             return (
                 <div className="p-4 space-y-4">
                      <div className="flex justify-between items-center mb-2"><h2 className="text-xl font-bold">外傭資料庫</h2><button onClick={onAdd} className="bg-green-600 text-white px-4 py-2 rounded font-bold hover:bg-green-700">+ 新增外傭</button></div>
                     <div className="flex flex-col md:flex-row gap-4 items-end"><Input label="深入搜尋資料" placeholder="搜尋任何文字或數字..." value={deepSearch} onChange={setDeepSearch} className="flex-1 mb-0" /><Select label="國籍" value={searchNat} onChange={setSearchNat} options={['所有國籍', '菲律賓', '印尼']} className="w-32 mb-0" /><Select label="申請類別" value={searchType} onChange={setSearchType} options={['所有申請類別', '海外外傭', '本地完約', '特別個案']} className="w-40 mb-0" /><Select label="學校" value={searchSchool} onChange={setSearchSchool} options={schoolOptions} className="w-32 mb-0" /></div>
                     <div className="flex overflow-x-auto gap-2 pb-2">{STATUS_TABS.map(s => <button key={s} onClick={() => {setStatus(s); setPage(1);}} className={`px-4 py-2 rounded whitespace-nowrap ${status===s ? 'bg-blue-600 text-white' : 'bg-white border'}`}>{s}</button>)}</div>
-                    <div className="bg-white rounded shadow overflow-hidden"><table className="w-full text-left"><thead className="bg-gray-100 text-sm"><tr><th className="p-3">操作</th><th className="p-3">照片</th><th className="p-3">編號</th><th className="p-3">姓名</th><th className="p-3">國籍</th><th className="p-3">申請類別</th><th className="p-3">狀態</th></tr></thead><tbody className="divide-y">{paginated.map(h => (<tr key={h.id} className="hover:bg-blue-50"><td className="p-3 space-x-2"><button onClick={() => onSelect(h)} className="text-blue-600 text-sm border px-2 rounded">查閱</button><button onClick={() => onEdit(h)} className="text-orange-600 text-sm border px-2 rounded">修改</button><button onClick={() => onDelete(h.id)} className="text-red-600 text-sm border px-2 rounded">刪除</button></td><td className="p-3"><img src={h.photo} className="h-10 w-10 rounded object-cover bg-gray-200" /></td><td className="p-3 font-bold">{h.refNo}</td><td className="p-3">{h.name}</td><td className="p-3">{h.nationality}</td><td className="p-3 text-sm">{h.type}</td><td className="p-3 text-sm">{h.status}</td></tr>))}</tbody></table></div>
+                    <div className="bg-white rounded shadow overflow-hidden"><table className="w-full text-left"><thead className="bg-gray-100 text-sm"><tr><th className="p-3">操作</th><th className="p-3">外傭照片</th><th className="p-3">外傭編號</th><th className="p-3">外傭姓名</th><th className="p-3">國籍</th><th className="p-3">申請類別</th><th className="p-3">上架狀態</th></tr></thead><tbody className="divide-y">{paginated.map(h => (<tr key={h.id} className="hover:bg-blue-50"><td className="p-3 space-x-2 flex"><button onClick={() => onSelect(h)} className="text-blue-600 text-sm border px-2 rounded">查閱</button><button onClick={() => openPublicPage(h.id)} className="text-green-600 text-sm border px-2 rounded ml-1">網頁</button><button onClick={() => onEdit(h)} className="text-orange-600 text-sm border px-2 rounded ml-1">修改</button><button onClick={() => onDelete(h.id)} className="text-red-600 text-sm border px-2 rounded ml-1">刪除</button></td><td className="p-3"><img src={h.photo} className="h-10 w-10 rounded object-cover bg-gray-200" /></td><td className="p-3 font-bold">{h.refNo}</td><td className="p-3">{h.name}</td><td className="p-3">{h.nationality}</td><td className="p-3 text-sm">{h.type}</td><td className="p-3 text-sm">{h.status}</td></tr>))}</tbody></table></div>
                     {totalPages > 1 && <div className="flex justify-center gap-2 mt-4"><button disabled={page===1} onClick={()=>setPage(page-1)} className="border px-2">Prev</button><span>{page}/{totalPages}</span><button disabled={page===totalPages} onClick={()=>setPage(page+1)} className="border px-2">Next</button></div>}
                 </div>
             );
         };
 
         const FilterPage = ({ helpers, onSelect }) => {
-            /* ... (Code omitted for brevity - same as V1.8) ... */
             const [filter, setFilter] = useState({ nats: [], types: [], maritals: [], langs: [], exps: [], zodiacs: [], horoscopes: [], ageFrom: '', ageTo: '', regionExp: [], educations: [], religions: [], availability: [] });
             const [results, setResults] = useState(null);
             const CheckboxGroup = ({ label, options, selected, onChange }) => (<div className="mb-4"><label className="block font-semibold mb-2 text-gray-700">{label}</label><div className="flex flex-wrap gap-2">{options.map(opt => (<div key={opt} onClick={() => onChange(selected.includes(opt) ? selected.filter(i => i !== opt) : [...selected, opt])} className={`px-3 py-1 border rounded cursor-pointer text-sm ${selected.includes(opt) ? 'bg-blue-100 border-blue-500 text-blue-700' : 'bg-white'}`}>{opt}</div>))}</div></div>);
             const doSearch = () => {
                 const res = helpers.filter(h => {
                     if (h.status !== '已上架') return false;
+                    // ... (filter logic same as V1.9) ...
                     if (filter.nats.length && !filter.nats.includes(h.nationality)) return false;
                     if (filter.types.length && !filter.types.some(t => (t === '海外外傭' && h.type === '海外外傭') || (t === '本地完約' && (h.type === '本地完約' || h.type === '特別個案')))) return false;
                     if (filter.maritals.length && !filter.maritals.includes(h.marital)) return false;
@@ -748,194 +774,38 @@
                         <CheckboxGroup label="生肖" options={ZODIACS} selected={filter.zodiacs} onChange={v => setFilter({...filter, zodiacs: v})} />
                         <CheckboxGroup label="星座" options={HOROSCOPES} selected={filter.horoscopes} onChange={v => setFilter({...filter, horoscopes: v})} />
                         <CheckboxGroup label="預計上班" options={MONTHS} selected={filter.availability} onChange={v => setFilter({...filter, availability: v})} />
-                        <div className="flex gap-4 pt-4 border-t"><button onClick={doSearch} className="flex-1 bg-amber-400 py-3 rounded font-bold hover:bg-amber-500">篩選</button><button onClick={() => {setFilter({nats:[],types:[],maritals:[],langs:[],exps:[],zodiacs:[],horoscopes:[],ageFrom:'',ageTo:'',regionExp:[],educations:[],religions:[],availability:[]}); setResults(null);}} className="px-6 border rounded hover:bg-gray-100">重設篩選</button></div>
+                        <div className="flex gap-4 pt-4 border-t"><button onClick={doSearch} className="w-1/2 bg-amber-400 py-3 rounded font-bold hover:bg-amber-500">篩選</button><button onClick={() => {setFilter({nats:[],types:[],maritals:[],langs:[],exps:[],zodiacs:[],horoscopes:[],ageFrom:'',ageTo:'',regionExp:[],educations:[],religions:[],availability:[]}); setResults(null);}} className="w-1/2 px-6 border rounded hover:bg-gray-100">重設篩選</button></div>
                     </div>
                     {results && (<div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">{results.length === 0 ? <div>沒有結果</div> : results.map(h => (<div key={h.id} className="bg-white rounded border flex overflow-hidden p-2 gap-2 cursor-pointer hover:shadow-md" onClick={() => onSelect(h)}><img src={h.photo} className="w-24 h-24 object-cover bg-gray-200" /><div><div className="font-bold text-blue-900">{h.refNo}</div><div>{h.nationality}</div><div className="text-xs bg-gray-100 px-1 rounded">{getAge(h.dob)}歲</div></div></div>))}</div>)}
                 </div>
             );
         };
 
-        // 5. New Helper Detail View (PDF Style)
         const HelperDetail = ({ helper, onClose, isPublic }) => {
+            /* ... (Code omitted for brevity - same as V1.9) ... */
             const age = getAge(helper.dob);
             const bmi = calculateBMI(helper.height, helper.weight);
             const zodiac = getZodiac(helper.dob);
-            
-            // Helper for checkmarks
             const Check = ({ val }) => <span className="checkmark">{val ? '☑' : '☐'}</span>;
-            
-            // Helper for language level
-            const LangRow = ({ lang, level }) => (
-                <tr>
-                    <td>{lang}</td>
-                    <td className="text-center">{level === '不選擇' ? '☑' : '☐'}</td>
-                    <td className="text-center">{level === '學習中' || level === '基本' ? '☑' : '☐'}</td>
-                    <td className="text-center">{level === '中等' ? '☑' : '☐'}</td>
-                    <td className="text-center">{level === '良好' ? '☑' : '☐'}</td>
-                </tr>
-            );
-
+            const LangRow = ({ lang, level }) => (<tr><td>{lang}</td><td className="text-center">{level === '不選擇' ? '☑' : '☐'}</td><td className="text-center">{level === '學習中' || level === '基本' ? '☑' : '☐'}</td><td className="text-center">{level === '中等' ? '☑' : '☐'}</td><td className="text-center">{level === '良好' ? '☑' : '☐'}</td></tr>);
             return (
                  <div className={`fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 overflow-y-auto ${isPublic ? 'bg-gray-100' : ''}`}>
                     <div className="bg-white w-full max-w-5xl shadow-xl overflow-hidden max-h-[95vh] overflow-y-auto relative pdf-container">
                         {!isPublic && <div className="sticky-nav bg-slate-800 text-white p-3 flex justify-between items-center no-print"><div>{helper.refNo} 資料</div><button onClick={onClose}><i className="fas fa-times"></i></button></div>}
-                        
-                        {/* Page 1 */}
                         <div className="pdf-page bg-white">
-                            {/* Header */}
-                            <div className="flex justify-between items-start mb-4 border-b pb-2">
-                                <div>
-                                    <h1 className="text-2xl font-bold text-blue-800">維港專業僱傭中心</h1>
-                                    <div className="text-sm text-gray-600">Horizon Employment Agency</div>
-                                    <div className="text-xs mt-1">Quality Employment Service Recognition | 優質僱傭服務認證</div>
-                                </div>
-                                <div className="text-right text-xs">
-                                    <div className="font-bold">Four Pledges 四大保證</div>
-                                    <div>真・全額退款</div>
-                                    <div>真・誠實收費</div>
-                                    <div>真・無限面試</div>
-                                    <div>真・無限詢問</div>
-                                </div>
-                            </div>
-
+                            <div className="flex justify-between items-start mb-4 border-b pb-2"><div><h1 className="text-2xl font-bold text-blue-800">維港專業僱傭中心</h1><div className="text-sm text-gray-600">Horizon Employment Agency</div><div className="text-xs mt-1">Quality Employment Service Recognition | 優質僱傭服務認證</div></div><div className="text-right text-xs"><div className="font-bold">Four Pledges 四大保證</div><div>真・全額退款</div><div>真・誠實收費</div><div>真・無限面試</div><div>真・無限詢問</div></div></div>
                             <div className="flex gap-4">
-                                {/* Left Column: Particulars */}
-                                <div className="flex-1">
-                                    <h2 className="text-lg font-bold mb-2 bg-blue-100 p-1">外傭資料 Helper Particulars</h2>
-                                    <table className="detail-table mb-4">
-                                        <tbody>
-                                            <tr><td className="detail-label">國籍 Nationality</td><td>{helper.nationality}</td><td className="detail-label">外傭編號 Ref No.</td><td>{helper.refNo}</td></tr>
-                                            <tr><td className="detail-label">年齡 Age</td><td>{age} 歲</td><td className="detail-label">外傭類別 Type</td><td>{helper.type}</td></tr>
-                                            <tr><td className="detail-label">生肖 Zodiac</td><td>{zodiac}</td><td className="detail-label">合約完結 Contract End</td><td>{helper.contractEnd}</td></tr>
-                                            <tr><td className="detail-label">身高 Height</td><td>{helper.height} cm</td><td className="detail-label">體重 Weight</td><td>{helper.weight} kg</td></tr>
-                                            <tr><td className="detail-label">BMI</td><td>{bmi}</td><td className="detail-label">性別 Gender</td><td>{helper.sex === 'F' || helper.sex === '女' ? '女 Female' : '男 Male'}</td></tr>
-                                            <tr><td className="detail-label">出生日期 DOB</td><td>{helper.dob}</td><td className="detail-label">婚姻 Marital</td><td>{helper.marital}</td></tr>
-                                            <tr><td className="detail-label">宗教 Religion</td><td>{helper.religion}</td><td className="detail-label">學歷 Education</td><td>{helper.education}</td></tr>
-                                        </tbody>
-                                    </table>
-
-                                    <h2 className="text-lg font-bold mb-2 bg-blue-100 p-1">家庭背景 Family Background</h2>
-                                    <table className="detail-table mb-4">
-                                        <tbody>
-                                            <tr><td className="detail-label">兄弟姊妹 Siblings</td><td>{helper.siblings}</td><td className="detail-label">家中排行 Rank</td><td>{helper.rank}</td></tr>
-                                            <tr><td className="detail-label">子女 Children</td><td colSpan="3">
-                                                {helper.sonCount > 0 && <span>兒子: {helper.sonCount} ({helper.sonAges.join(', ')}歲) </span>}
-                                                {helper.daughterCount > 0 && <span>女兒: {helper.daughterCount} ({helper.daughterAges.join(', ')}歲)</span>}
-                                            </td></tr>
-                                        </tbody>
-                                    </table>
-
-                                    <div className="flex gap-4 mb-4">
-                                        <div className="flex-1">
-                                            <h2 className="text-lg font-bold mb-2 bg-blue-100 p-1">語言能力 Language</h2>
-                                            <table className="detail-table">
-                                                <thead><tr><th>語言</th><th>不懂</th><th>基本</th><th>中等</th><th>良好</th></tr></thead>
-                                                <tbody>
-                                                    <LangRow lang="英語 English" level={helper.languages.english} />
-                                                    <LangRow lang="廣東話 Cantonese" level={helper.languages.cantonese} />
-                                                    <LangRow lang="普通話 Mandarin" level={helper.languages.mandarin} />
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                        <div className="w-1/3">
-                                            <h2 className="text-lg font-bold mb-2 bg-blue-100 p-1">烹飪 Cooking</h2>
-                                            <div className="border p-2 text-sm">
-                                                <div><Check val={helper.q1 === '喜歡'} /> 喜歡烹飪 Love to cook</div>
-                                                <div><Check val={helper.q2 === '可自學'} /> 能自學菜式 Self learning</div>
-                                                <div><Check val={helper.q3 === '有信心'} /> 有信心烹飪 Confident</div>
-                                                <div className="mt-2 pt-2 border-t">
-                                                    <div>中餐: {helper.languages.chineseCooking}</div>
-                                                    <div>西餐: {helper.languages.westernCooking}</div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <h2 className="text-lg font-bold mb-2 bg-blue-100 p-1">地區經驗 Regional Experience</h2>
-                                    <div className="flex flex-wrap gap-2 border p-2 mb-4">
-                                        {(helper.regionExp || []).map((r, i) => (
-                                            <div key={i} className="border px-2 py-1 bg-gray-50 rounded">
-                                                <span className="font-bold">{r.region === '其他' ? r.otherName : r.region}</span>: {r.years} 年
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Right Column: Photo */}
-                                <div className="w-64 flex flex-col items-center">
-                                    <div className="border-4 border-gray-300 w-full h-80 bg-gray-100 mb-2 flex items-center justify-center overflow-hidden">
-                                        {helper.photo ? <img src={helper.photo} className="w-full h-full object-cover" /> : <span className="text-gray-400">No Photo</span>}
-                                    </div>
-                                    <div className="text-center font-bold text-xl">{helper.refNo}</div>
-                                </div>
+                                <div className="flex-1"><h2 className="text-lg font-bold mb-2 bg-blue-100 p-1">外傭資料 Helper Particulars</h2><table className="detail-table mb-4"><tbody><tr><td className="detail-label">國籍 Nationality</td><td>{helper.nationality}</td><td className="detail-label">外傭編號 Ref No.</td><td>{helper.refNo}</td></tr><tr><td className="detail-label">年齡 Age</td><td>{age} 歲</td><td className="detail-label">外傭類別 Type</td><td>{helper.type}</td></tr><tr><td className="detail-label">生肖 Zodiac</td><td>{zodiac}</td><td className="detail-label">合約完結 Contract End</td><td>{helper.contractEnd}</td></tr><tr><td className="detail-label">身高 Height</td><td>{helper.height} cm</td><td className="detail-label">體重 Weight</td><td>{helper.weight} kg</td></tr><tr><td className="detail-label">BMI</td><td>{bmi}</td><td className="detail-label">性別 Gender</td><td>{helper.sex === 'F' || helper.sex === '女' ? '女 Female' : '男 Male'}</td></tr><tr><td className="detail-label">出生日期 DOB</td><td>{helper.dob}</td><td className="detail-label">婚姻 Marital</td><td>{helper.marital}</td></tr><tr><td className="detail-label">宗教 Religion</td><td>{helper.religion}</td><td className="detail-label">學歷 Education</td><td>{helper.education}</td></tr></tbody></table><h2 className="text-lg font-bold mb-2 bg-blue-100 p-1">家庭背景 Family Background</h2><table className="detail-table mb-4"><tbody><tr><td className="detail-label">兄弟姊妹 Siblings</td><td>{helper.siblings}</td><td className="detail-label">家中排行 Rank</td><td>{helper.rank}</td></tr><tr><td className="detail-label">子女 Children</td><td colSpan="3">{helper.sonCount > 0 && <span>兒子: {helper.sonCount} ({helper.sonAges.join(', ')}歲) </span>}{helper.daughterCount > 0 && <span>女兒: {helper.daughterCount} ({helper.daughterAges.join(', ')}歲)</span>}</td></tr></tbody></table><div className="flex gap-4 mb-4"><div className="flex-1"><h2 className="text-lg font-bold mb-2 bg-blue-100 p-1">語言能力 Language</h2><table className="detail-table"><thead><tr><th>語言</th><th>不懂</th><th>基本</th><th>中等</th><th>良好</th></tr></thead><tbody><LangRow lang="英語 English" level={helper.languages.english} /><LangRow lang="廣東話 Cantonese" level={helper.languages.cantonese} /><LangRow lang="普通話 Mandarin" level={helper.languages.mandarin} /></tbody></table></div><div className="w-1/3"><h2 className="text-lg font-bold mb-2 bg-blue-100 p-1">烹飪 Cooking</h2><div className="border p-2 text-sm"><div><Check val={helper.q1 === '喜歡'} /> 喜歡烹飪 Love to cook</div><div><Check val={helper.q2 === '可自學'} /> 能自學菜式 Self learning</div><div><Check val={helper.q3 === '有信心'} /> 有信心烹飪 Confident</div><div className="mt-2 pt-2 border-t"><div>中餐: {helper.languages.chineseCooking}</div><div>西餐: {helper.languages.westernCooking}</div></div></div></div></div><h2 className="text-lg font-bold mb-2 bg-blue-100 p-1">地區經驗 Regional Experience</h2><div className="flex flex-wrap gap-2 border p-2 mb-4">{(helper.regionExp || []).map((r, i) => (<div key={i} className="border px-2 py-1 bg-gray-50 rounded"><span className="font-bold">{r.region === '其他' ? r.otherName : r.region}</span>: {r.years} 年</div>))}</div></div>
+                                <div className="w-64 flex flex-col items-center"><div className="border-4 border-gray-300 w-full h-80 bg-gray-100 mb-2 flex items-center justify-center overflow-hidden">{helper.photo ? <img src={helper.photo} className="w-full h-full object-cover" /> : <span className="text-gray-400">No Photo</span>}</div><div className="text-center font-bold text-xl">{helper.refNo}</div></div>
                             </div>
                         </div>
-
-                        {/* Page Break */}
                         <div className="page-break"></div>
-
-                        {/* Page 2 */}
                         <div className="pdf-page bg-white">
                             <h2 className="text-xl font-bold mb-4 border-b pb-2">工作經驗 Work Experience</h2>
-                            
                             {(helper.experience || []).map((exp, i) => (
-                                <div key={i} className="mb-6 border p-4 rounded-lg bg-gray-50 break-inside-avoid">
-                                    <h3 className="font-bold text-lg mb-2 text-blue-800">{i === 0 ? "最近僱主 Recent Employer" : "前任僱主 Previous Employer"}</h3>
-                                    <table className="detail-table mb-2 bg-white">
-                                        <tbody>
-                                            <tr>
-                                                <td className="detail-label" width="15%">工作地點 Location</td><td width="35%">{exp.region}</td>
-                                                <td className="detail-label" width="15%">工作年期 Period</td><td width="35%">{exp.startYear}/{exp.startMonth} - {exp.endYear}/{exp.endMonth} ({exp.workDuration}年)</td>
-                                            </tr>
-                                            <tr>
-                                                <td className="detail-label">單位面積 Size</td><td>{exp.houseSize} sq ft</td>
-                                                <td className="detail-label">家庭人數 Family Size</td><td>{exp.familySize} 人</td>
-                                            </tr>
-                                            <tr>
-                                                <td className="detail-label">僱主國籍 Nationality</td><td>{exp.employerNation}</td>
-                                                <td className="detail-label">外傭人數 Helpers</td><td>{exp.helperCount} 人</td>
-                                            </tr>
-                                            <tr>
-                                                <td className="detail-label">離職原因 Reason</td><td colSpan="3">{exp.reason}</td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                    
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <div className="font-bold text-sm mb-1">照顧成員 Care Duties:</div>
-                                            <div className="flex flex-wrap gap-1">
-                                                {(exp.members || []).map((m, idx) => (
-                                                    <span key={idx} className="bg-blue-100 px-2 py-1 rounded text-xs border border-blue-200">
-                                                        {m.type} {m.type !== '成人' ? `(${m.startAge}-${m.endAge}歲)` : `(${m.quantity}人)`}
-                                                    </span>
-                                                ))}
-                                                {(exp.members || []).length === 0 && <span className="text-gray-400 text-sm">-</span>}
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <div className="font-bold text-sm mb-1">其他職責 Duties:</div>
-                                            <div className="flex flex-wrap gap-1">
-                                                {(exp.tags || []).map((t, idx) => <span key={idx} className="bg-gray-100 px-2 py-1 rounded text-xs border">☑ {t}</span>)}
-                                                {(exp.pets || []).length > 0 && <span className="bg-orange-100 px-2 py-1 rounded text-xs border border-orange-200">☑ 寵物</span>}
-                                                {(exp.disabilities || []).length > 0 && <span className="bg-red-100 px-2 py-1 rounded text-xs border border-red-200">☑ 傷殘護理</span>}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    {(exp.pets || []).length > 0 && (
-                                        <div className="mt-2 text-sm"><span className="font-bold">寵物細節:</span> {exp.pets.map(p => `${p.type === '其他' ? p.otherName : p.type}(${p.count})`).join(', ')}</div>
-                                    )}
-                                    {(exp.disabilities || []).length > 0 && (
-                                        <div className="mt-2 text-sm"><span className="font-bold">傷殘護理細節:</span> {exp.disabilities.map(d => `${d.type === '其他' ? d.note : d.type}`).join(', ')}</div>
-                                    )}
-                                </div>
+                                <div key={i} className="mb-6 border p-4 rounded-lg bg-gray-50 break-inside-avoid"><h3 className="font-bold text-lg mb-2 text-blue-800">{i === 0 ? "最近僱主 Recent Employer" : "前任僱主 Previous Employer"}</h3><table className="detail-table mb-2 bg-white"><tbody><tr><td className="detail-label" width="15%">工作地點 Location</td><td width="35%">{exp.region}</td><td className="detail-label" width="15%">工作年期 Period</td><td width="35%">{exp.startYear}/{exp.startMonth} - {exp.endYear}/{exp.endMonth} ({exp.workDuration}年)</td></tr><tr><td className="detail-label">單位面積 Size</td><td>{exp.houseSize} sq ft</td><td className="detail-label">家庭人數 Family Size</td><td>{exp.familySize} 人</td></tr><tr><td className="detail-label">僱主國籍 Nationality</td><td>{exp.employerNation}</td><td className="detail-label">外傭人數 Helpers</td><td>{exp.helperCount} 人</td></tr><tr><td className="detail-label">離職原因 Reason</td><td colSpan="3">{exp.reason}</td></tr></tbody></table><div className="grid grid-cols-2 gap-4"><div><div className="font-bold text-sm mb-1">照顧成員 Care Duties:</div><div className="flex flex-wrap gap-1">{(exp.members || []).map((m, idx) => (<span key={idx} className="bg-blue-100 px-2 py-1 rounded text-xs border border-blue-200">{m.type} {m.type !== '成人' ? `(${m.startAge}-${m.endAge}歲)` : `(${m.quantity}人)`}</span>))}{(exp.members || []).length === 0 && <span className="text-gray-400 text-sm">-</span>}</div></div><div><div className="font-bold text-sm mb-1">其他職責 Duties:</div><div className="flex flex-wrap gap-1">{(exp.tags || []).map((t, idx) => <span key={idx} className="bg-gray-100 px-2 py-1 rounded text-xs border">☑ {t}</span>)}{(exp.pets || []).length > 0 && <span className="bg-orange-100 px-2 py-1 rounded text-xs border border-orange-200">☑ 寵物</span>}{(exp.disabilities || []).length > 0 && <span className="bg-red-100 px-2 py-1 rounded text-xs border border-red-200">☑ 傷殘護理</span>}</div></div></div>{(exp.pets || []).length > 0 && (<div className="mt-2 text-sm"><span className="font-bold">寵物細節:</span> {exp.pets.map(p => `${p.type === '其他' ? p.otherName : p.type}(${p.count})`).join(', ')}</div>)}{(exp.disabilities || []).length > 0 && (<div className="mt-2 text-sm"><span className="font-bold">傷殘護理細節:</span> {exp.disabilities.map(d => `${d.type === '其他' ? d.note : d.type}`).join(', ')}</div>)}</div>
                             ))}
-
-                            <div className="mt-8 pt-4 border-t text-xs text-gray-500 text-justify">
-                                <strong>免責聲明 Disclaimer:</strong> 這兩頁的所有資料由求職者/外傭提供, 内容只供參考用途, 本公司亦建議準僱主及其成員親自面試求職者/外傭, 以對他/她有較佳了解。本公司不保證和不考究以上資料是否均屬正確、完備、真實、閣下和其他閱讀者應自行判斷和自負風險, 本公司概不負責。使用或閱讀以上資料, 即表示您/您們接受本免責聲明。謝謝。<br/>
-                                All information are provided by the job-seeker/helper, all content are for reference only. Our employment agency also advises prospective employers and their members to conduct an interview for a better understanding. Our employment agency does not guarantee accurate, complete and true.
-                            </div>
+                            <div className="mt-8 pt-4 border-t text-xs text-gray-500 text-justify"><strong>免責聲明 Disclaimer:</strong> 這兩頁的所有資料由求職者/外傭提供, 内容只供參考用途, 本公司亦建議準僱主及其成員親自面試求職者/外傭, 以對他/她有較佳了解。本公司不保證和不考究以上資料是否均屬正確、完備、真實、閣下和其他閱讀者應自行判斷和自負風險, 本公司概不負責。使用或閱讀以上資料, 即表示您/您們接受本免責聲明。謝謝。<br/>All information are provided by the job-seeker/helper, all content are for reference only. Our employment agency also advises prospective employers and their members to conduct an interview for a better understanding. Our employment agency does not guarantee accurate, complete and true.</div>
                         </div>
                     </div>
                 </div>
@@ -972,9 +842,9 @@
                 <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
                     <div className="bg-white p-8 rounded shadow w-96">
                         <h1 className="text-2xl font-bold mb-4 text-center">HMS 登入</h1>
-                        <form onSubmit={e=>{e.preventDefault(); login(e.target.pass.value);}}><input name="pass" type="password" className="border w-full p-2 rounded mb-4" placeholder="密碼" /><button className="bg-blue-600 text-white w-full py-2 rounded">登入</button></form>
+                        <form onSubmit={e=>{e.preventDefault(); login(e.target.pass.value);}}><input name="pass" type="password" className="border w-full p-2 rounded mb-4" placeholder="輸入密碼" /><button className="bg-blue-600 text-white w-full py-2 rounded">登入</button></form>
                     </div>
-                    <div className="mt-4 text-gray-400">V1.9</div>
+                    <div className="mt-4 text-gray-400">V1.10</div>
                 </div>
             );
 
@@ -989,7 +859,7 @@
                         <div className="p-4 border-t border-slate-700">
                             <button onClick={()=>setPage('settings')} className="w-full text-left p-2 hover:bg-slate-700 rounded mb-2 text-sm"><i className="fas fa-cog w-6"></i> 系統設定</button>
                             <button onClick={logout} className="w-full bg-red-600 py-1 rounded text-sm">登出</button>
-                            <div className="text-xs text-slate-500 mt-2">V1.9</div>
+                            <div className="text-xs text-slate-500 mt-2">V1.10</div>
                         </div>
                     </div>
                     <div className="flex-1 bg-gray-50 overflow-x-hidden">
@@ -1008,3 +878,4 @@
     </script>
 </body>
 </html>
+
